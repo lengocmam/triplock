@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Flight } from './entities/flight.entity';
 import { Seat, SeatStatus } from './entities/seat.entity';
+import { FareClass } from './entities/fare-class.entity';
 
 @Injectable()
 export class FlightsService {
@@ -11,47 +12,64 @@ export class FlightsService {
     private flightsRepository: Repository<Flight>,
     @InjectRepository(Seat)
     private seatsRepository: Repository<Seat>,
+    @InjectRepository(FareClass)
+    private fareClassRepository: Repository<FareClass>,
   ) {}
-
-  async findOne(id: string): Promise<Flight> {
-    const flight = await this.flightsRepository.findOne({
-        where: { id },
-        relations: ['seats'], // nếu Flight có relation seats
-    });
-
-    if (!flight) {
-        throw new NotFoundException('Không tìm thấy chuyến bay');
-    }
-
-    return flight;
-    }
 
   async findAll(filters?: {
     departureCity?: string;
     arrivalCity?: string;
     date?: string;
-    }): Promise<Flight[]> {
+  }): Promise<Flight[]> {
     const query = this.flightsRepository.createQueryBuilder('flight');
 
     if (filters?.departureCity) {
-        query.andWhere('flight.departureCity ILIKE :dep', {
+      query.andWhere('flight.departureCity ILIKE :dep', {
         dep: `%${filters.departureCity}%`,
-        });
+      });
     }
     if (filters?.arrivalCity) {
-        query.andWhere('flight.arrivalCity ILIKE :arr', {
+      query.andWhere('flight.arrivalCity ILIKE :arr', {
         arr: `%${filters.arrivalCity}%`,
-        });
+      });
     }
     if (filters?.date) {
-        // So khớp theo đúng ngày (bỏ qua giờ phút)
-        query.andWhere('DATE(flight.departureTime) = :date', { date: filters.date });
+      query.andWhere('DATE(flight.departureTime) = :date', { date: filters.date });
     }
 
     query.orderBy('flight.departureTime', 'ASC');
-
     return query.getMany();
+  }
+
+  async findOne(id: string): Promise<Flight> {
+    const flight = await this.flightsRepository.findOne({
+      where: { id },
+      relations: ['seats'],
+    });
+    if (!flight) {
+      throw new NotFoundException('Không tìm thấy chuyến bay');
     }
+    return flight;
+  }
+
+  async getFareClasses(flightId: string): Promise<FareClass[]> {
+    const fareClasses = await this.fareClassRepository.find({
+      where: { flight: { id: flightId } },
+      order: { price: 'ASC' },
+    });
+    return fareClasses;
+  }
+
+  async getFareClassById(fareClassId: string): Promise<FareClass> {
+    const fareClass = await this.fareClassRepository.findOne({
+      where: { id: fareClassId },
+      relations: ['flight'],
+    });
+    if (!fareClass) {
+      throw new NotFoundException('Không tìm thấy hạng vé');
+    }
+    return fareClass;
+  }
 
   async getSeatById(seatId: string): Promise<Seat> {
     const seat = await this.seatsRepository.findOne({
@@ -68,12 +86,6 @@ export class FlightsService {
     await this.seatsRepository.update(seatId, { status });
   }
 
-  async clearAll(): Promise<{ message: string }> {
-    await this.seatsRepository.query('TRUNCATE TABLE seats, flights, bookings, payments CASCADE');
-    return { message: 'Đã xóa toàn bộ dữ liệu chuyến bay/ghế' };
-  }
-
-  // Dùng để seed dữ liệu mẫu — sẽ gọi 1 lần lúc setup
   async createFlightWithSeats(data: {
     flightCode: string;
     departureCity: string;
@@ -111,6 +123,48 @@ export class FlightsService {
     }
     await this.seatsRepository.save(seats);
 
+    // Tạo 3 hạng vé mặc định cho mỗi chuyến bay, giá tính theo % giá gốc
+    const fareClasses = [
+      this.fareClassRepository.create({
+        flight: savedFlight,
+        name: 'Economy',
+        price: data.price,
+        carryOnKg: 7,
+        checkedBaggageKg: 0,
+        refundable: false,
+        changeable: false,
+        note: 'Vé điện tử phát hành trong 24 giờ sau khi thanh toán',
+      }),
+      this.fareClassRepository.create({
+        flight: savedFlight,
+        name: 'Economy Saver',
+        price: Math.round(data.price * 1.15),
+        carryOnKg: 7,
+        checkedBaggageKg: 20,
+        refundable: false,
+        changeable: true,
+        note: 'Đổi lịch có phí, bao gồm 20kg hành lý ký gửi',
+      }),
+      this.fareClassRepository.create({
+        flight: savedFlight,
+        name: 'Economy An toàn',
+        price: Math.round(data.price * 1.35),
+        carryOnKg: 7,
+        checkedBaggageKg: 20,
+        refundable: true,
+        changeable: true,
+        note: 'Hoàn 80% giá vé, bảo hiểm du lịch toàn diện kèm theo',
+      }),
+    ];
+    await this.fareClassRepository.save(fareClasses);
+
     return savedFlight;
+  }
+
+  async clearAll(): Promise<{ message: string }> {
+    await this.seatsRepository.query(
+      'TRUNCATE TABLE seats, flights, bookings, payments, fare_classes CASCADE',
+    );
+    return { message: 'Đã xóa toàn bộ dữ liệu chuyến bay/ghế' };
   }
 }

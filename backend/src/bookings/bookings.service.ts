@@ -31,47 +31,49 @@ export class BookingsService {
     return `seat:lock:${seatId}`;
   }
 
-  async lockSeat(seatId: string, userId: string): Promise<Booking> {
-    const user = await this.usersService.findById(userId);
-    if (!user.isVerified) {
-      throw new ForbiddenException('Tài khoản chưa xác thực, vui lòng verify OTP trước');
-    }
-
-    const seat = await this.flightsService.getSeatById(seatId);
-    if (seat.status !== SeatStatus.AVAILABLE) {
-      throw new BadRequestException('Ghế đã được đặt hoặc đang bị giữ');
-    }
-
-    const lockKey = this.getLockKey(seatId);
-    const result = await this.redis.set(lockKey, userId, 'EX', LOCK_TTL_SECONDS, 'NX');
-
-    if (result !== 'OK') {
-      throw new BadRequestException('Ghế vừa bị người khác giữ, vui lòng chọn ghế khác');
-    }
-
-    try {
-      await this.flightsService.updateSeatStatus(seatId, SeatStatus.LOCKED);
-
-      const lockExpiresAt = new Date(Date.now() + LOCK_TTL_SECONDS * 1000);
-
-      const booking = this.bookingsRepository.create({
-        user: { id: userId } as any,
-        seat: { id: seatId } as any,
-        status: BookingStatus.PENDING,
-        lockExpiresAt,
-      });
-
-      const saved = await this.bookingsRepository.save(booking);
-
-      // Báo real-time cho các client khác đang xem cùng chuyến bay
-      this.bookingsGateway.notifySeatLocked(seat.flight.id, seatId, seat.seatNumber);
-
-      return saved;
-    } catch (error) {
-      await this.redis.del(lockKey);
-      throw error;
-    }
+  async lockSeat(seatId: string, fareClassId: string, userId: string): Promise<Booking> {
+  const user = await this.usersService.findById(userId);
+  if (!user.isVerified) {
+    throw new ForbiddenException('Tài khoản chưa xác thực, vui lòng verify OTP trước');
   }
+
+  const seat = await this.flightsService.getSeatById(seatId);
+  if (seat.status !== SeatStatus.AVAILABLE) {
+    throw new BadRequestException('Ghế đã được đặt hoặc đang bị giữ');
+  }
+
+  const fareClass = await this.flightsService.getFareClassById(fareClassId);
+
+  const lockKey = this.getLockKey(seatId);
+  const result = await this.redis.set(lockKey, userId, 'EX', LOCK_TTL_SECONDS, 'NX');
+
+  if (result !== 'OK') {
+    throw new BadRequestException('Ghế vừa bị người khác giữ, vui lòng chọn ghế khác');
+  }
+
+  try {
+    await this.flightsService.updateSeatStatus(seatId, SeatStatus.LOCKED);
+
+    const lockExpiresAt = new Date(Date.now() + LOCK_TTL_SECONDS * 1000);
+
+    const booking = this.bookingsRepository.create({
+      user: { id: userId } as any,
+      seat: { id: seatId } as any,
+      fareClass: { id: fareClassId } as any,
+      status: BookingStatus.PENDING,
+      lockExpiresAt,
+    });
+
+    const saved = await this.bookingsRepository.save(booking);
+
+    this.bookingsGateway.notifySeatLocked(seat.flight.id, seatId, seat.seatNumber);
+
+    return saved;
+  } catch (error) {
+    await this.redis.del(lockKey);
+    throw error;
+  }
+}
 
   async confirmBooking(bookingId: string, userId: string): Promise<Booking> {
     const booking = await this.bookingsRepository.findOne({

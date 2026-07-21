@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import Navbar from '../components/Navbar';
+import FareSelectionModal from '../components/FareSelectionModal';
 
 function formatTime(dateStr) {
   return new Date(dateStr).toLocaleString('vi-VN', {
@@ -21,11 +22,12 @@ const PROMOS = [
 export default function FlightListPage() {
   const [flights, setFlights] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // State thật cho search — người dùng gõ trực tiếp
   const [departureCity, setDepartureCity] = useState('');
   const [arrivalCity, setArrivalCity] = useState('');
   const [date, setDate] = useState('');
+
+  // State điều khiển modal chọn vé — thay cho việc điều hướng route
+  const [selectedFlightId, setSelectedFlightId] = useState(null);
 
   const navigate = useNavigate();
 
@@ -44,7 +46,6 @@ export default function FlightListPage() {
     }
   };
 
-  // Load toàn bộ chuyến bay lần đầu vào trang
   useEffect(() => {
     fetchFlights();
   }, []);
@@ -61,8 +62,6 @@ export default function FlightListPage() {
     fetchFlights();
   };
 
-  // Danh sách gợi ý điểm đến thật, tính từ dữ liệu chuyến bay hiện có
-  // -> khi bấm vào, tự điền và tìm luôn (không phải data giả)
   const uniqueDestinations = [
     ...new Map(flights.map((f) => [f.arrivalCity, f])).values(),
   ].slice(0, 5);
@@ -70,6 +69,11 @@ export default function FlightListPage() {
   const handleQuickSelect = (city) => {
     setArrivalCity(city);
     fetchFlights({ departureCity, arrivalCity: city, date });
+  };
+
+  // Sau khi chọn hạng vé trong modal, mới điều hướng sang trang chọn ghế
+  const handleFareContinue = (fareClassId) => {
+    navigate(`/flights/${selectedFlightId}/seats?fareClassId=${fareClassId}`);
   };
 
   return (
@@ -81,7 +85,6 @@ export default function FlightListPage() {
         <div className="hero-subtitle">Đặt chỗ real-time — ghế được giữ ngay khi bạn chọn</div>
       </div>
 
-      {/* Thanh tìm kiếm thật — có state, submit gọi API filter thật */}
       <div className="search-bar-card">
         <form className="search-bar-inner" onSubmit={handleSearch}>
           <div className="search-field">
@@ -139,7 +142,6 @@ export default function FlightListPage() {
         ))}
       </div>
 
-      {/* Gợi ý điểm đến — lấy thật từ dữ liệu chuyến bay đang có, bấm vào lọc luôn */}
       {uniqueDestinations.length > 0 && (
         <>
           <div className="section-title">Điểm đến có chuyến bay</div>
@@ -194,9 +196,10 @@ export default function FlightListPage() {
                 <div className="flight-price-label">Giá vé</div>
                 {Number(flight.price).toLocaleString('vi-VN')} đ
               </div>
+              {/* Bấm vào đây giờ MỞ MODAL, không điều hướng route */}
               <button
                 className="btn btn-primary"
-                onClick={() => navigate(`/flights/${flight.id}/seats`)}
+                onClick={() => setSelectedFlightId(flight.id)}
               >
                 Chọn ghế
               </button>
@@ -206,6 +209,15 @@ export default function FlightListPage() {
       </div>
 
       <div style={{ height: 40 }} />
+
+      {/* Modal chỉ render khi có flight được chọn */}
+      {selectedFlightId && (
+        <FareSelectionModal
+          flightId={selectedFlightId}
+          onClose={() => setSelectedFlightId(null)}
+          onContinue={handleFareContinue}
+        />
+      )}
     </div>
   );
 }

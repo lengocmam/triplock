@@ -1,17 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useSocket } from '../hooks/useSocket';
 import Navbar from '../components/Navbar';
 
-const SEAT_CLASS = {
-  available: 'seat-available',
-  locked: 'seat-locked',
-  booked: 'seat-booked',
-};
-
 export default function SeatSelectionPage() {
   const { flightId } = useParams();
+  const [searchParams] = useSearchParams();
+  const fareClassId = searchParams.get('fareClassId');
   const navigate = useNavigate();
   const socketRef = useSocket();
 
@@ -21,6 +17,12 @@ export default function SeatSelectionPage() {
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState('');
   const countdownRef = useRef(null);
+
+  useEffect(() => {
+    if (!fareClassId) {
+      navigate(`/flights/${flightId}/fares`);
+    }
+  }, [fareClassId, flightId, navigate]);
 
   useEffect(() => {
     apiClient.get(`/flights/${flightId}`).then((res) => {
@@ -70,10 +72,10 @@ export default function SeatSelectionPage() {
   }, [myBooking]);
 
   const handleSelectSeat = async (seat) => {
-    if (seat.status !== 'available' || myBooking) return;
+    if (seat.status !== 'available' || myBooking || !fareClassId) return;
     setError('');
     try {
-      const res = await apiClient.post(`/bookings/lock-seat/${seat.id}`);
+      const res = await apiClient.post(`/bookings/lock-seat/${seat.id}`, { fareClassId });
       setMyBooking(res.data);
       setSeats((prev) => prev.map((s) => (s.id === seat.id ? { ...s, status: 'locked' } : s)));
     } catch (err) {
@@ -110,18 +112,34 @@ export default function SeatSelectionPage() {
     );
   }
 
+  // Nhóm ghế theo số hàng (1, 2, 3...) để render đúng sơ đồ khoang máy bay
+  const seatsByRow = {};
+  seats.forEach((seat) => {
+    const rowNum = parseInt(seat.seatNumber);
+    if (!seatsByRow[rowNum]) seatsByRow[rowNum] = {};
+    const letter = seat.seatNumber.replace(String(rowNum), '');
+    seatsByRow[rowNum][letter] = seat;
+  });
+  const rowNumbers = Object.keys(seatsByRow).map(Number).sort((a, b) => a - b);
+  const LEFT_COLS = ['A', 'B', 'C'];
+  const RIGHT_COLS = ['D', 'E', 'F'];
+
+  const getSeatClass = (seat) => {
+    if (!seat) return '';
+    if (myBooking?.seat?.id === seat.id) return 'seat-mine';
+    return `seat-${seat.status}`;
+  };
+
   return (
     <div className="page-container">
       <Navbar />
 
-      <div style={{ maxWidth: 500, margin: '30px auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: 600, margin: '30px auto', padding: '0 24px' }}>
         <div className="card">
           <h2 style={{ marginBottom: 4 }}>
             {flight.flightCode}: {flight.departureCity} → {flight.arrivalCity}
           </h2>
-          <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 20 }}>
-            {Number(flight.price).toLocaleString('vi-VN')} đ / ghế
-          </p>
+          <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 20 }}>Chọn ghế ngồi</p>
 
           {error && <p className="error-text">{error}</p>}
 
@@ -140,23 +158,53 @@ export default function SeatSelectionPage() {
             </div>
           )}
 
-          <div className="seat-map">
-            {seats.map((seat) => (
-              <button
-                key={seat.id}
-                className={`seat-btn ${SEAT_CLASS[seat.status]}`}
-                onClick={() => handleSelectSeat(seat)}
-                disabled={seat.status !== 'available'}
-              >
-                {seat.seatNumber}
-              </button>
+          <div className="cabin-wrapper">
+            <div className="cabin-nose" />
+
+            {rowNumbers.map((rowNum) => (
+              <div className="cabin-row" key={rowNum}>
+                <div className="cabin-row-number">{rowNum}</div>
+
+                {LEFT_COLS.map((col) => {
+                  const seat = seatsByRow[rowNum][col];
+                  return (
+                    <button
+                      key={col}
+                      className={`cabin-seat ${getSeatClass(seat)}`}
+                      onClick={() => seat && handleSelectSeat(seat)}
+                      disabled={!seat || seat.status !== 'available'}
+                      title={seat?.seatNumber}
+                    >
+                      {col}
+                    </button>
+                  );
+                })}
+
+                <div className="cabin-aisle-gap" />
+
+                {RIGHT_COLS.map((col) => {
+                  const seat = seatsByRow[rowNum][col];
+                  return (
+                    <button
+                      key={col}
+                      className={`cabin-seat ${getSeatClass(seat)}`}
+                      onClick={() => seat && handleSelectSeat(seat)}
+                      disabled={!seat || seat.status !== 'available'}
+                      title={seat?.seatNumber}
+                    >
+                      {col}
+                    </button>
+                  );
+                })}
+              </div>
             ))}
           </div>
 
-          <div className="legend">
-            <span><span className="legend-dot" style={{ background: '#12a150' }}></span>Trống</span>
-            <span><span className="legend-dot" style={{ background: '#f5a623' }}></span>Đang giữ</span>
-            <span><span className="legend-dot" style={{ background: '#cbd2d9' }}></span>Đã đặt</span>
+          <div className="cabin-legend">
+            <span><span className="cabin-legend-dot" style={{ background: '#12a150' }}></span>Trống</span>
+            <span><span className="cabin-legend-dot" style={{ background: '#0071eb' }}></span>Ghế của bạn</span>
+            <span><span className="cabin-legend-dot" style={{ background: '#f5a623' }}></span>Đang giữ</span>
+            <span><span className="cabin-legend-dot" style={{ background: '#b0b8c1' }}></span>Đã đặt</span>
           </div>
         </div>
       </div>

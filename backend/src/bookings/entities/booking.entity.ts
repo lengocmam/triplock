@@ -9,13 +9,14 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Seat } from '../../flights/entities/seat.entity';
+import { FareClass } from '../../flights/entities/fare-class.entity';
 import { Payment } from './payment.entity';
 
 export enum BookingStatus {
-  PENDING = 'pending',     // vừa giữ chỗ, chờ thanh toán
-  CONFIRMED = 'confirmed', // đã thanh toán xong
+  PENDING = 'pending',
+  CONFIRMED = 'confirmed',
   CANCELLED = 'cancelled',
-  EXPIRED = 'expired',     // hết hạn giữ chỗ mà chưa thanh toán
+  EXPIRED = 'expired',
 }
 
 @Entity('bookings')
@@ -30,11 +31,14 @@ export class Booking {
   @JoinColumn()
   seat!: Seat;
 
+  @ManyToOne(() => FareClass)
+  fareClass!: FareClass;
+
   @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.PENDING })
   status!: BookingStatus;
 
   @Column({ type: 'timestamp' })
-  lockExpiresAt!: Date; // hết giờ này mà chưa thanh toán -> tự hủy
+  lockExpiresAt!: Date;
 
   @OneToOne(() => Payment, (payment) => payment.booking)
   payment!: Payment;

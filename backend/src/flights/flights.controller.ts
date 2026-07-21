@@ -1,22 +1,27 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { FlightsService } from './flights.service';
 import { Flight } from './entities/flight.entity';
 @Controller('flights')
 export class FlightsController {
   constructor(private flightsService: FlightsService) {}
 
-    @Get()
-    findAll(
+  @Get()
+  findAll(
     @Query('departureCity') departureCity?: string,
     @Query('arrivalCity') arrivalCity?: string,
     @Query('date') date?: string,
-    ) {
+  ) {
     return this.flightsService.findAll({ departureCity, arrivalCity, date });
-    }
+  }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.flightsService.findOne(id);
+  }
+
+  @Get(':id/fares')
+  getFares(@Param('id') id: string) {
+    return this.flightsService.getFareClasses(id);
   }
 
   @Post('seed')
@@ -36,7 +41,7 @@ export class FlightsController {
     for (let i = 0; i < routes.length; i++) {
       const r = routes[i];
       const departureTime = new Date();
-      departureTime.setDate(departureTime.getDate() + i + 1); // mỗi chuyến 1 ngày khác nhau
+      departureTime.setDate(departureTime.getDate() + i + 1);
       departureTime.setHours(6 + i * 2, 0, 0, 0);
 
       const arrivalTime = new Date(departureTime.getTime() + r.hours * 60 * 60 * 1000);

@@ -5,6 +5,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Seat } from './seat.entity';
+import { FareClass } from './fare-class.entity';
 
 @Entity('flights')
 export class Flight {
@@ -12,7 +13,7 @@ export class Flight {
   id!: string;
 
   @Column()
-  flightCode!: string; // vd: VN123
+  flightCode!: string;
 
   @Column()
   departureCity!: string;
@@ -27,8 +28,11 @@ export class Flight {
   arrivalTime!: Date;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  price!: number;
+  price!: number; // giá thấp nhất, hiển thị ở list — vẫn giữ để không phá vỡ code cũ
 
   @OneToMany(() => Seat, (seat) => seat.flight)
   seats!: Seat[];
+
+  @OneToMany(() => FareClass, (fareClass) => fareClass.flight)
+  fareClasses!: FareClass[];
 }
