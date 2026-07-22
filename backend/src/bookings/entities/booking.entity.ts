@@ -45,4 +45,13 @@ export class Booking {
 
   @CreateDateColumn()
   createdAt!: Date;
+
+  @Column({ nullable: true })
+  passengerName!: string;
+
+  @Column({ nullable: true })
+  passengerPhone!: string;
+
+  @Column({ nullable: true })
+  bookingCode!: string;
 }

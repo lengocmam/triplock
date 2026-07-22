@@ -5,7 +5,8 @@ export function useSocket() {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    socketRef.current = io('http://localhost:3000');
+    const url = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    socketRef.current = io(url);
 
     return () => {
       socketRef.current?.disconnect();

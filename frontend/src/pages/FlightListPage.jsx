@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import Navbar from '../components/Navbar';
 import FareSelectionModal from '../components/FareSelectionModal';
-
+import BookingDrawer from '../components/BookingDrawer';
+import FlightCardSkeleton from '../components/FlightCardSkeleton';
+import { useDebounce } from '../hooks/useDebounce';
 function formatTime(dateStr) {
   return new Date(dateStr).toLocaleString('vi-VN', {
     day: '2-digit',
@@ -29,7 +31,15 @@ export default function FlightListPage() {
   // State điều khiển modal chọn vé — thay cho việc điều hướng route
   const [selectedFlightId, setSelectedFlightId] = useState(null);
 
+  const handleBookingDone = () => {
+    setSelectedFlightId(null);
+    fetchFlights({ departureCity, arrivalCity, date }); // load lại để cập nhật ghế đã đặt
+  };
+
   const navigate = useNavigate();
+
+  const debouncedDeparture = useDebounce(departureCity);
+  const debouncedArrival = useDebounce(arrivalCity);
 
   const fetchFlights = async (filters = {}) => {
     setLoading(true);
@@ -47,8 +57,9 @@ export default function FlightListPage() {
   };
 
   useEffect(() => {
-    fetchFlights();
-  }, []);
+    fetchFlights({ departureCity: debouncedDeparture, arrivalCity: debouncedArrival, date });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedDeparture, debouncedArrival, date]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -171,6 +182,8 @@ export default function FlightListPage() {
       </div>
 
       <div className="flight-list">
+        {loading && <FlightCardSkeleton />}
+
         {!loading && flights.length === 0 && (
           <div className="card" style={{ textAlign: 'center', color: '#6b7280' }}>
             Không tìm thấy chuyến bay phù hợp với bộ lọc.
@@ -212,12 +225,12 @@ export default function FlightListPage() {
 
       {/* Modal chỉ render khi có flight được chọn */}
       {selectedFlightId && (
-        <FareSelectionModal
-          flightId={selectedFlightId}
-          onClose={() => setSelectedFlightId(null)}
-          onContinue={handleFareContinue}
-        />
-      )}
+          <BookingDrawer
+            flightId={selectedFlightId}
+            onClose={() => setSelectedFlightId(null)}
+            onDone={handleBookingDone}
+          />
+        )}
     </div>
   );
 }

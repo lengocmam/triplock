@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   Param,
   Body,
   UseGuards,
@@ -23,13 +24,30 @@ export class BookingsController {
     return this.bookingsService.lockSeat(seatId, fareClassId, req.user.userId);
   }
 
-  @Post('confirm/:bookingId')
-  confirmBooking(@Param('bookingId') bookingId: string, @Request() req: any) {
-    return this.bookingsService.confirmBooking(bookingId, req.user.userId);
+  @Post('confirm-multiple')
+  confirmMultiple(
+    @Body()
+    body: {
+      bookingIds: string[];
+      passengers: { bookingId: string; passengerName: string; passengerPhone: string }[];
+    },
+    @Request() req: any,
+  ) {
+    return this.bookingsService.confirmMultiple(body.bookingIds, body.passengers, req.user.userId);
   }
 
   @Post('cancel/:bookingId')
   cancelBooking(@Param('bookingId') bookingId: string) {
     return this.bookingsService.releaseSeat(bookingId);
+  }
+
+  @Get('my-bookings')
+  myBookings(@Request() req: any) {
+    return this.bookingsService.findMyBookings(req.user.userId);
+  }
+
+  @Post('cancel-confirmed/:bookingId')
+  cancelConfirmedBooking(@Param('bookingId') bookingId: string, @Request() req: any) {
+    return this.bookingsService.cancelConfirmedBooking(bookingId, req.user.userId);
   }
 }

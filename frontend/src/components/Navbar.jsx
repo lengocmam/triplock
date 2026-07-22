@@ -12,10 +12,15 @@ export default function Navbar() {
 
   return (
     <div className="navbar">
-      <div className="navbar-logo">✈️ TripLock</div>
+      <div className="navbar-logo" style={{ cursor: 'pointer' }} onClick={() => navigate('/flights')}>
+        ✈️ TripLock
+      </div>
       <div className="navbar-actions">
         {user ? (
           <>
+            <button className="btn btn-secondary" onClick={() => navigate('/my-bookings')}>
+              Vé của tôi
+            </button>
             <span>{user.fullName}</span>
             <button className="btn btn-secondary" onClick={handleLogout}>
               Đăng xuất
