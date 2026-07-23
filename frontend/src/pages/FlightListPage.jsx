@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import Navbar from '../components/Navbar';
-import FareSelectionModal from '../components/FareSelectionModal';
-import BookingDrawer from '../components/BookingDrawer';
 import FlightCardSkeleton from '../components/FlightCardSkeleton';
+import ConnectionStatus from '../components/ConnectionStatus';
+import BookingDrawer from '../components/BookingDrawer';
 import { useDebounce } from '../hooks/useDebounce';
+import { useSocket } from '../hooks/useSocket';
+
 function formatTime(dateStr) {
   return new Date(dateStr).toLocaleString('vi-VN', {
     day: '2-digit',
@@ -21,22 +23,26 @@ const PROMOS = [
   { icon: '⚡', title: 'Giữ chỗ nhanh', desc: 'Ghế khóa real-time 5 phút' },
 ];
 
+function seatBadgeClass(count) {
+  if (count <= 3) return 'seats-live-critical';
+  if (count <= 8) return 'seats-live-low';
+  return 'seats-live-plenty';
+}
+
 export default function FlightListPage() {
   const [flights, setFlights] = useState([]);
   const [loading, setLoading] = useState(false);
   const [departureCity, setDepartureCity] = useState('');
   const [arrivalCity, setArrivalCity] = useState('');
   const [date, setDate] = useState('');
-
-  // State điều khiển modal chọn vé — thay cho việc điều hướng route
   const [selectedFlightId, setSelectedFlightId] = useState(null);
+  const [sortBy, setSortBy] = useState('recommended'); // recommended | price-asc | price-desc | time-asc
 
-  const handleBookingDone = () => {
-    setSelectedFlightId(null);
-    fetchFlights({ departureCity, arrivalCity, date }); // load lại để cập nhật ghế đã đặt
-  };
+  // Set các flightId vừa nhận cập nhật, để chạy hiệu ứng pulse rồi tự tắt
+  const [pulsingIds, setPulsingIds] = useState(new Set());
 
   const navigate = useNavigate();
+  const { socketRef, connected } = useSocket();
 
   const debouncedDeparture = useDebounce(departureCity);
   const debouncedArrival = useDebounce(arrivalCity);
@@ -61,6 +67,30 @@ export default function FlightListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedDeparture, debouncedArrival, date]);
 
+  // Lắng nghe cập nhật số ghế trống real-time cho TOÀN BỘ danh sách đang hiển thị
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    const handleSeatsChanged = ({ flightId, availableSeats }) => {
+      setFlights((prev) =>
+        prev.map((f) => (f.id === flightId ? { ...f, availableSeats } : f)),
+      );
+      // Bật hiệu ứng nhấp nháy nhẹ cho đúng thẻ chuyến bay vừa đổi, rồi tự tắt sau 600ms
+      setPulsingIds((prev) => new Set(prev).add(flightId));
+      setTimeout(() => {
+        setPulsingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(flightId);
+          return next;
+        });
+      }, 600);
+    };
+
+    socket.on('flightSeatsChanged', handleSeatsChanged);
+    return () => socket.off('flightSeatsChanged', handleSeatsChanged);
+  }, [socketRef]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     fetchFlights({ departureCity, arrivalCity, date });
@@ -82,11 +112,17 @@ export default function FlightListPage() {
     fetchFlights({ departureCity, arrivalCity: city, date });
   };
 
-  // Sau khi chọn hạng vé trong modal, mới điều hướng sang trang chọn ghế
-  const handleFareContinue = (fareClassId) => {
-    navigate(`/flights/${selectedFlightId}/seats?fareClassId=${fareClassId}`);
+  const handleBookingDone = () => {
+    setSelectedFlightId(null);
+    fetchFlights({ departureCity, arrivalCity, date });
   };
 
+  const sortedFlights = [...flights].sort((a, b) => {
+    if (sortBy === 'price-asc') return Number(a.price) - Number(b.price);
+    if (sortBy === 'price-desc') return Number(b.price) - Number(a.price);
+    if (sortBy === 'time-asc') return new Date(a.departureTime) - new Date(b.departureTime);
+    return 0; // 'recommended' giữ nguyên thứ tự backend trả về
+  });
   return (
     <div className="page-container">
       <Navbar />
@@ -129,12 +165,7 @@ export default function FlightListPage() {
             Tìm chuyến bay
           </button>
           {(departureCity || arrivalCity || date) && (
-            <button
-              className="btn btn-secondary"
-              style={{ height: 42 }}
-              type="button"
-              onClick={handleReset}
-            >
+            <button className="btn btn-secondary" style={{ height: 42 }} type="button" onClick={handleReset}>
               Xóa lọc
             </button>
           )}
@@ -159,16 +190,10 @@ export default function FlightListPage() {
           <div className="section-subtitle">Bấm vào để lọc nhanh theo điểm đến</div>
           <div className="destination-grid">
             {uniqueDestinations.map((f) => (
-              <div
-                key={f.arrivalCity}
-                className="destination-card"
-                onClick={() => handleQuickSelect(f.arrivalCity)}
-              >
+              <div key={f.arrivalCity} className="destination-card" onClick={() => handleQuickSelect(f.arrivalCity)}>
                 <div className="destination-info" style={{ padding: 16 }}>
                   <div className="destination-name">{f.arrivalCity}</div>
-                  <div className="destination-price">
-                    từ {Number(f.price).toLocaleString('vi-VN')} đ
-                  </div>
+                  <div className="destination-price">từ {Number(f.price).toLocaleString('vi-VN')} đ</div>
                 </div>
               </div>
             ))}
@@ -176,9 +201,27 @@ export default function FlightListPage() {
         </>
       )}
 
-      <div className="section-title">Chuyến bay sẵn có</div>
-      <div className="section-subtitle">
-        {loading ? 'Đang tìm kiếm...' : `${flights.length} chuyến bay phù hợp`}
+      <div className="section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>Chuyến bay sẵn có</span>
+        <ConnectionStatus connected={connected} />
+      </div>
+      <div className="section-subtitle" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>{loading ? 'Đang tìm kiếm...' : `${flights.length} chuyến bay phù hợp`}</span>
+        <div className="sort-tabs">
+          {[
+            { id: 'recommended', label: 'Đề xuất' },
+            { id: 'price-asc', label: 'Giá thấp nhất' },
+            { id: 'time-asc', label: 'Giờ khởi hành' },
+          ].map((s) => (
+            <button
+              key={s.id}
+              className={`sort-tab ${sortBy === s.id ? 'sort-tab-active' : ''}`}
+              onClick={() => setSortBy(s.id)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flight-list">
@@ -190,47 +233,54 @@ export default function FlightListPage() {
           </div>
         )}
 
-        {flights.map((flight) => (
-          <div key={flight.id} className="flight-card">
-            <div className="flight-route">
-              <div className="flight-code-badge">{flight.flightCode}</div>
-              <div>
-                <div className="flight-cities">
-                  {flight.departureCity} → {flight.arrivalCity}
-                </div>
-                <div className="flight-time">
-                  Khởi hành: {formatTime(flight.departureTime)} · Đến:{' '}
-                  {formatTime(flight.arrivalTime)}
+        {!loading &&
+          sortedFlights.map((flight) => (
+            <div key={flight.id} className="flight-card">
+              <div className="flight-route">
+                <div className="flight-code-badge">{flight.flightCode}</div>
+                <div>
+                  <div className="flight-cities">
+                    {flight.departureCity} → {flight.arrivalCity}
+                  </div>
+                  <div className="flight-time">
+                    Khởi hành: {formatTime(flight.departureTime)} · Đến: {formatTime(flight.arrivalTime)}
+                  </div>
+                  <div
+                    className={`seats-live-badge ${seatBadgeClass(flight.availableSeats)} ${
+                      pulsingIds.has(flight.id) ? 'seats-pulse' : ''
+                    }`}
+                    style={{ marginTop: 6 }}
+                  >
+                    🟢 Còn {flight.availableSeats} ghế trống
+                  </div>
                 </div>
               </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-              <div className="flight-price">
-                <div className="flight-price-label">Giá vé</div>
-                {Number(flight.price).toLocaleString('vi-VN')} đ
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                <div className="flight-price">
+                  <div className="flight-price-label">Giá vé</div>
+                  {Number(flight.price).toLocaleString('vi-VN')} đ
+                </div>
+                <button
+                  className="btn btn-primary"
+                  disabled={flight.availableSeats === 0}
+                  onClick={() => setSelectedFlightId(flight.id)}
+                >
+                  {flight.availableSeats === 0 ? 'Hết ghế' : 'Chọn ghế'}
+                </button>
               </div>
-              {/* Bấm vào đây giờ MỞ MODAL, không điều hướng route */}
-              <button
-                className="btn btn-primary"
-                onClick={() => setSelectedFlightId(flight.id)}
-              >
-                Chọn ghế
-              </button>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       <div style={{ height: 40 }} />
 
-      {/* Modal chỉ render khi có flight được chọn */}
       {selectedFlightId && (
-          <BookingDrawer
-            flightId={selectedFlightId}
-            onClose={() => setSelectedFlightId(null)}
-            onDone={handleBookingDone}
-          />
-        )}
+        <BookingDrawer
+          flightId={selectedFlightId}
+          onClose={() => setSelectedFlightId(null)}
+          onDone={handleBookingDone}
+        />
+      )}
     </div>
   );
 }

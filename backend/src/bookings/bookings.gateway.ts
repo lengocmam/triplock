@@ -8,8 +8,10 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
+const LOBBY_ROOM = 'flights_lobby';
+
 @WebSocketGateway({
-  cors: { origin: '*' }, // dev only, production nên giới hạn domain cụ thể
+  cors: { origin: '*' },
 })
 export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -19,19 +21,24 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
+    // Tự động join lobby ngay khi kết nối, để nhận cập nhật số ghế trống của mọi chuyến bay
+    client.join(LOBBY_ROOM);
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  // Client join "room" theo flightId để chỉ nhận update của đúng chuyến bay đang xem
   @SubscribeMessage('joinFlight')
   handleJoinFlight(client: Socket, flightId: string) {
     client.join(`flight:${flightId}`);
   }
 
-  // Gọi hàm này từ BookingsService khi có thay đổi trạng thái ghế
+  @SubscribeMessage('leaveFlight')
+  handleLeaveFlight(client: Socket, flightId: string) {
+    client.leave(`flight:${flightId}`);
+  }
+
   notifySeatLocked(flightId: string, seatId: string, seatNumber: string) {
     this.server.to(`flight:${flightId}`).emit('seatLocked', { seatId, seatNumber });
   }
@@ -42,5 +49,11 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   notifySeatBooked(flightId: string, seatId: string, seatNumber: string) {
     this.server.to(`flight:${flightId}`).emit('seatBooked', { seatId, seatNumber });
+  }
+
+  // Bắn ra TOÀN BỘ client đang mở trang danh sách (không chỉ ai đang xem đúng chuyến bay đó)
+  // để cập nhật số ghế trống trên từng thẻ chuyến bay theo thời gian thực
+  notifyFlightSeatsChanged(flightId: string, availableSeats: number) {
+    this.server.to(LOBBY_ROOM).emit('flightSeatsChanged', { flightId, availableSeats });
   }
 }

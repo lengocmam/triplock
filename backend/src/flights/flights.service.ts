@@ -20,25 +20,31 @@ export class FlightsService {
     departureCity?: string;
     arrivalCity?: string;
     date?: string;
-  }): Promise<Flight[]> {
+  }): Promise<any[]> {
     const query = this.flightsRepository.createQueryBuilder('flight');
 
     if (filters?.departureCity) {
-      query.andWhere('flight.departureCity ILIKE :dep', {
-        dep: `%${filters.departureCity}%`,
-      });
+      query.andWhere('flight.departureCity ILIKE :dep', { dep: `%${filters.departureCity}%` });
     }
     if (filters?.arrivalCity) {
-      query.andWhere('flight.arrivalCity ILIKE :arr', {
-        arr: `%${filters.arrivalCity}%`,
-      });
+      query.andWhere('flight.arrivalCity ILIKE :arr', { arr: `%${filters.arrivalCity}%` });
     }
     if (filters?.date) {
       query.andWhere('DATE(flight.departureTime) = :date', { date: filters.date });
     }
 
     query.orderBy('flight.departureTime', 'ASC');
-    return query.getMany();
+    const flights = await query.getMany();
+
+    // Đếm ghế trống cho từng chuyến bay, trả kèm vào response luôn
+    const withSeatCount = await Promise.all(
+      flights.map(async (f) => ({
+        ...f,
+        availableSeats: await this.countAvailableSeats(f.id),
+      })),
+    );
+
+    return withSeatCount;
   }
 
   async findOne(id: string): Promise<Flight> {
@@ -166,5 +172,11 @@ export class FlightsService {
       'TRUNCATE TABLE seats, flights, bookings, payments, fare_classes CASCADE',
     );
     return { message: 'Đã xóa toàn bộ dữ liệu chuyến bay/ghế' };
+  }
+
+  async countAvailableSeats(flightId: string): Promise<number> {
+    return this.seatsRepository.count({
+      where: { flight: { id: flightId }, status: SeatStatus.AVAILABLE },
+    });
   }
 }

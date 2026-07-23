@@ -958,3 +958,83 @@ body {
   height: 92px;
   margin-bottom: 14px;
 }
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.connection-online {
+  color: #12a150;
+  background: #eafaf0;
+}
+.connection-offline {
+  color: #d9364f;
+  background: #fdeeee;
+  animation: blink 1s infinite;
+}
+@keyframes blink {
+  50% { opacity: 0.5; }
+}
+
+.connection-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.seats-live-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.3s;
+}
+.seats-live-plenty { background: #eafaf0; color: #12a150; }
+.seats-live-low { background: #fff8e6; color: #f5a623; }
+.seats-live-critical { background: #fdeeee; color: #d9364f; }
+
+.seats-live-badge.seats-pulse {
+  animation: seatPulse 0.6s ease;
+}
+@keyframes seatPulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.countdown-urgent {
+  color: #d9364f;
+  animation: countdownBlink 0.8s infinite;
+}
+@keyframes countdownBlink {
+  50% { opacity: 0.4; }
+}
+
+.sort-tabs {
+  display: flex;
+  gap: 8px;
+}
+.sort-tab {
+  background: white;
+  border: 1.5px solid #e0e4e9;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+.sort-tab-active {
+  background: #eef4ff;
+  border-color: #0071eb;
+  color: #0071eb;
+}

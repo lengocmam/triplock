@@ -50,4 +50,9 @@ export class BookingsController {
   cancelConfirmedBooking(@Param('bookingId') bookingId: string, @Request() req: any) {
     return this.bookingsService.cancelConfirmedBooking(bookingId, req.user.userId);
   }
+
+  @Post('price-breakdown')
+  async priceBreakdown(@Body() body: { fareClassId: string; passengerCount: number }) {
+    return this.bookingsService.getPriceBreakdown(body.fareClassId, body.passengerCount);
+  }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import apiClient from '../api/client';
 import { useSocket } from '../hooks/useSocket';
+import { useToast } from '../context/ToastContext';
 
 function formatDateTime(dateStr) {
   const d = new Date(dateStr);
@@ -22,7 +23,8 @@ const STEP_LABELS = {
 };
 
 export default function BookingDrawer({ flightId, onClose, onDone }) {
-  const socketRef = useSocket();
+  const { socketRef, connected } = useSocket();
+  const { addToast } = useToast();
   const [step, setStep] = useState('fare');
 
   const [flight, setFlight] = useState(null);
@@ -43,6 +45,7 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
 
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [priceBreakdown, setPriceBreakdown] = useState(null);
 
   useEffect(() => {
     apiClient.get(`/flights/${flightId}`).then((res) => {
@@ -52,19 +55,44 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
     apiClient.get(`/flights/${flightId}/fares`).then((res) => setFares(res.data));
   }, [flightId]);
 
+  const myBookingsRef = useRef([]);
+  useEffect(() => {
+    myBookingsRef.current = myBookings;
+  }, [myBookings]);
+
+  useEffect(() => {
+    if (step === 'payment' && selectedFareId) {
+      apiClient
+        .post('/bookings/price-breakdown', {
+          fareClassId: selectedFareId,
+          passengerCount: myBookings.length,
+        })
+        .then((res) => setPriceBreakdown(res.data));
+    }
+  }, [step, selectedFareId, myBookings.length]);
+
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
     socket.emit('joinFlight', flightId);
 
-    socket.on('seatLocked', ({ seatId }) => {
+    socket.on('seatLocked', ({ seatId, seatNumber }) => {
       setSeats((prev) => prev.map((s) => (s.id === seatId ? { ...s, status: 'locked' } : s)));
+      const isMine = myBookingsRef.current.some((b) => b.seat.id === seatId);
+      if (!isMine && step === 'seat') {
+        addToast(`Ghế ${seatNumber} vừa được người khác giữ`, 'info');
+      }
     });
-    socket.on('seatBooked', ({ seatId }) => {
+
+    socket.on('seatBooked', ({ seatId, seatNumber }) => {
       setSeats((prev) => prev.map((s) => (s.id === seatId ? { ...s, status: 'booked' } : s)));
     });
-    socket.on('seatReleased', ({ seatId }) => {
+
+    socket.on('seatReleased', ({ seatId, seatNumber }) => {
       setSeats((prev) => prev.map((s) => (s.id === seatId ? { ...s, status: 'available' } : s)));
+      if (step === 'seat') {
+        addToast(`Ghế ${seatNumber} vừa được nhả ra, bạn có thể chọn`, 'success');
+      }
     });
 
     return () => {
@@ -72,7 +100,7 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
       socket.off('seatBooked');
       socket.off('seatReleased');
     };
-  }, [flightId, socketRef]);
+  }, [flightId, socketRef, step, addToast]);
 
   // Đếm ngược theo mốc hết hạn SỚM NHẤT trong các ghế đang giữ — vì ghế nào hết hạn trước sẽ mất trước
   useEffect(() => {
@@ -184,6 +212,7 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
       });
       setConfirmedBookings(res.data);
       setStep('success');
+      addToast('Đã gửi vé điện tử qua email của bạn', 'success');
     } catch (err) {
       setError(err.response?.data?.message || 'Thanh toán thất bại');
     } finally {
@@ -351,7 +380,8 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
               <strong>{myBookings.length}/{passengerCount}</strong>
               {myBookings.length > 0 && (
                 <>
-                  {' '}— còn <strong>{countdown}s</strong>
+                  {' '}— còn{' '}
+                  <strong className={countdown <= 30 ? 'countdown-urgent' : ''}>{countdown}s</strong>
                 </>
               )}
             </div>
@@ -477,12 +507,28 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
                   <strong>{Number(selectedFare?.price).toLocaleString('vi-VN')} đ</strong>
                 </div>
               ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '1px solid #eef2f7' }}>
-                <span>Tổng thanh toán ({myBookings.length} khách)</span>
-                <strong style={{ color: '#0071eb', fontSize: 18 }}>
-                  {totalPrice.toLocaleString('vi-VN')} đ
-                </strong>
-              </div>
+              {priceBreakdown && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #eef2f7', fontSize: 13, color: '#6b7280' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span>Giá vé × {priceBreakdown.passengerCount}</span>
+                    <span>{(priceBreakdown.perPassenger.fareBasePrice * priceBreakdown.passengerCount).toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span>Thuế, phí sân bay × {priceBreakdown.passengerCount}</span>
+                    <span>{(priceBreakdown.perPassenger.airportTax * priceBreakdown.passengerCount).toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <span>Phí dịch vụ × {priceBreakdown.passengerCount}</span>
+                    <span>{(priceBreakdown.perPassenger.serviceFee * priceBreakdown.passengerCount).toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px dashed #eef2f7' }}>
+                    <strong style={{ color: '#1a1a2e' }}>Tổng thanh toán</strong>
+                    <strong style={{ color: '#0071eb', fontSize: 18 }}>
+                      {priceBreakdown.grandTotal.toLocaleString('vi-VN')} đ
+                    </strong>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="fare-name" style={{ marginBottom: 10 }}>Phương thức thanh toán</div>
@@ -515,9 +561,10 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
             ))}
 
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setStep('passenger')}>← Quay lại</button>
-              <button className="btn btn-primary" disabled={submitting} onClick={handlePay}>
-                {submitting ? 'Đang xử lý...' : `Thanh toán ${totalPrice.toLocaleString('vi-VN')} đ`}
+              <button className="btn btn-primary" disabled={submitting || !priceBreakdown} onClick={handlePay}>
+                {submitting
+                  ? 'Đang xử lý...'
+                  : `Thanh toán ${priceBreakdown ? priceBreakdown.grandTotal.toLocaleString('vi-VN') : '...'} đ`}
               </button>
             </div>
           </>

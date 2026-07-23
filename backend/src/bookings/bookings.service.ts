@@ -27,6 +27,14 @@ export class BookingsService {
     private bookingsGateway: BookingsGateway,
   ) {}
 
+  // Thuế + phí sân bay tính theo % giá vé, giống cách các hãng bay thật hiển thị tách riêng
+  private calculateFees(fareBasePrice: number) {
+    const airportTax = Math.round(fareBasePrice * 0.08); // phí sân bay 8%
+    const serviceFee = 50000; // phí dịch vụ cố định
+    const total = fareBasePrice + airportTax + serviceFee;
+    return { fareBasePrice, airportTax, serviceFee, total };
+  }
+
   private getLockKey(seatId: string): string {
     return `seat:lock:${seatId}`;
   }
@@ -65,7 +73,12 @@ export class BookingsService {
       });
 
       const saved = await this.bookingsRepository.save(booking);
+
       this.bookingsGateway.notifySeatLocked(seat.flight.id, seatId, seat.seatNumber);
+
+      const availableCount = await this.flightsService.countAvailableSeats(seat.flight.id);
+      this.bookingsGateway.notifyFlightSeatsChanged(seat.flight.id, availableCount);
+
       return saved;
     } catch (error) {
       await this.redis.del(lockKey);
@@ -135,8 +148,16 @@ export class BookingsService {
           booking.seat.seatNumber,
         );
       }
-
+      if (confirmedBookings.length > 0) {
+        const flightId = confirmedBookings[0].seat.flight.id;
+        const availableCount = await this.flightsService.countAvailableSeats(flightId);
+        this.bookingsGateway.notifyFlightSeatsChanged(flightId, availableCount);
+      }
       return confirmedBookings;
+
+      // Giả lập gửi email xác nhận vé — thực tế sẽ gọi service email thật (SendGrid, SES...)
+      const user = await manager.findOne('users', { where: { id: userId } } as any);
+      console.log(`[Email giả lập] Gửi vé điện tử tới người dùng — Mã đặt chỗ: ${bookingCode}, số vé: ${confirmedBookings.length}`);
     });
   }
 
@@ -158,6 +179,9 @@ export class BookingsService {
       booking.seat.id,
       booking.seat.seatNumber,
     );
+
+    const availableCount = await this.flightsService.countAvailableSeats(booking.seat.flight.id);
+    this.bookingsGateway.notifyFlightSeatsChanged(booking.seat.flight.id, availableCount);
   }
 
   async findMyBookings(userId: string): Promise<Booking[]> {
@@ -201,6 +225,20 @@ export class BookingsService {
       booking.seat.seatNumber,
     );
 
+    const availableCount = await this.flightsService.countAvailableSeats(booking.seat.flight.id);
+    this.bookingsGateway.notifyFlightSeatsChanged(booking.seat.flight.id, availableCount);
+
     return booking;
+  }
+
+  async getPriceBreakdown(fareClassId: string, passengerCount: number) {
+    const fareClass = await this.flightsService.getFareClassById(fareClassId);
+    const perPax = this.calculateFees(Number(fareClass.price));
+
+    return {
+      perPassenger: perPax,
+      passengerCount,
+      grandTotal: perPax.total * passengerCount,
+    };
   }
 }
