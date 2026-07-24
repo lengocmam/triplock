@@ -1,3 +1,32 @@
+:root {
+  --bg-primary: #f5f7fa;
+  --bg-card: #ffffff;
+  --bg-hover: #eef2f7;
+  --text-primary: #1a1a2e;
+  --text-secondary: #6b7280;
+  --border-color: #e0e4e9;
+  --shadow-color: rgba(0, 0, 0, 0.06);
+  --accent: #0071eb;
+  --accent-hover: #005bc4;
+}
+
+[data-theme='dark'] {
+  --bg-primary: #0f1420;
+  --bg-card: #1a2032;
+  --bg-hover: #232b40;
+  --text-primary: #e8ecf3;
+  --text-secondary: #9aa5b8;
+  --border-color: #2a3348;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --accent: #3b9eff;
+  --accent-hover: #5cb0ff;
+}
+
+* {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -1037,4 +1066,132 @@ body {
   background: #eef4ff;
   border-color: #0071eb;
   color: #0071eb;
+}
+
+.theme-toggle-btn {
+  background: var(--bg-hover);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-toggle-btn:hover {
+  transform: rotate(20deg);
+}
+
+.navbar-username {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.mobile-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  box-shadow: 0 4px 16px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  animation: slideDown 0.2s ease;
+  z-index: 60;
+}
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.mobile-menu-item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 15px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.mobile-menu-item:hover {
+  background: var(--bg-hover);
+}
+.mobile-menu-danger {
+  color: #d9364f;
+}
+
+@media (max-width: 768px) {
+  .navbar-desktop-only {
+    display: none;
+  }
+  .hamburger-btn {
+    display: block;
+  }
+  .navbar {
+    position: relative;
+  }
+}
+
+.btn {
+  transition: all 0.15s ease, transform 0.1s ease;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.flight-card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.flight-card:hover {
+  box-shadow: 0 6px 20px var(--shadow-color);
+  transform: translateY(-2px);
+}
+
+.destination-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fare-card {
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.fare-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Fade-in nhẹ cho toàn bộ trang khi chuyển route */
+.page-container {
+  animation: pageEnter 0.3s ease;
+}
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.password-field {
+  position: relative;
+}
+.password-field .form-input {
+  padding-right: 44px;
+}
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
 }

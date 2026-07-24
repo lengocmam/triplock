@@ -55,4 +55,6 @@ export class BookingsController {
   async priceBreakdown(@Body() body: { fareClassId: string; passengerCount: number }) {
     return this.bookingsService.getPriceBreakdown(body.fareClassId, body.passengerCount);
   }
+
+  
 }

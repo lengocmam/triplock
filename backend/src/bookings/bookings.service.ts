@@ -38,6 +38,14 @@ export class BookingsService {
   private getLockKey(seatId: string): string {
     return `seat:lock:${seatId}`;
   }
+  
+  // Thuế + phí sân bay tính theo % giá vé, giống cách các hãng bay thật hiển thị tách riêng
+  private calculateFees(fareBasePrice: number) {
+    const airportTax = Math.round(fareBasePrice * 0.08); // phí sân bay 8%
+    const serviceFee = 50000; // phí dịch vụ cố định
+    const total = fareBasePrice + airportTax + serviceFee;
+    return { fareBasePrice, airportTax, serviceFee, total };
+  }
 
   async lockSeat(seatId: string, fareClassId: string, userId: string): Promise<Booking> {
     const user = await this.usersService.findById(userId);

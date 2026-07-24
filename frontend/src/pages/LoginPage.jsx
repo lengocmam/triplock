@@ -5,18 +5,23 @@ import { useAuth } from '../context/AuthContext';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSubmitting(true);
     try {
       await login(email, password);
       navigate('/flights');
     } catch (err) {
       setError(err.response?.data?.message || 'Đăng nhập thất bại');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -32,17 +37,28 @@ export default function LoginPage() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
             />
-            <input
-              className="form-input"
-              type="password"
-              placeholder="Mật khẩu"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="password-field">
+              <input
+                className="form-input"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Mật khẩu"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
             {error && <p className="error-text">{error}</p>}
-            <button className="btn btn-primary" style={{ width: '100%' }} type="submit">
-              Đăng nhập
+            <button className="btn btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting}>
+              {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
           </form>
           <div className="auth-link">
