@@ -6,6 +6,7 @@ import FlightListPage from './pages/FlightListPage';
 import MyBookingsPage from './pages/MyBookingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import { useAuth } from './context/AuthContext';
+import ActivityLogPage from './pages/ActivityLogPage';
 
 function App() {
   const { user } = useAuth();
@@ -19,6 +20,7 @@ function App() {
       <Route path="/my-bookings" element={user ? <MyBookingsPage /> : <Navigate to="/login" />} />
       <Route path="/" element={<Navigate to="/flights" />} />
       <Route path="*" element={<NotFoundPage />} />
+      <Route path="/activity" element={user ? <ActivityLogPage /> : <Navigate to="/login" />} />
     </Routes>
   );
 }

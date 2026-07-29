@@ -56,5 +56,25 @@ export class BookingsController {
     return this.bookingsService.getPriceBreakdown(body.fareClassId, body.passengerCount);
   }
 
-  
+  @Post('create-qr-payment')
+  createQrPayment(@Body() body: { bookingIds: string[] }, @Request() req: any) {
+    return this.bookingsService.createQrPaymentSession(body.bookingIds, req.user.userId);
+  }
+
+  @Post('confirm-qr-payment')
+  confirmQrPayment(
+    @Body()
+    body: {
+      sessionId: string;
+      passengers: { bookingId: string; passengerName: string; passengerPhone: string }[];
+    },
+    @Request() req: any,
+  ) {
+    return this.bookingsService.confirmQrPayment(body.sessionId, body.passengers, req.user.userId);
+  }  
+
+  @Get('my-payments')
+  myPayments(@Request() req: any) {
+    return this.bookingsService.findMyPayments(req.user.userId);
+  }
 }

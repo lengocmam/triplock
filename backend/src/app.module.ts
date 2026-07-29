@@ -10,10 +10,15 @@ import { FlightsModule } from './flights/flights.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { AuthModule } from './auth/auth.module';
 import { RedisModule } from './redis/redis.module';
+import { ActivityLogModule } from './activity-log/activity-log.module';
+import { MailModule } from './mail/mail.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // 1 phút
@@ -32,13 +37,19 @@ import { RedisModule } from './redis/redis.module';
         database: config.get('DATABASE_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
+        ssl: {
+          rejectUnauthorized: false,
+        },
       }),
     }),
     RedisModule,
+    ActivityLogModule, 
     UsersModule,
     FlightsModule,
     BookingsModule,
     AuthModule,
+    MailModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

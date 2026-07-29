@@ -35,6 +35,9 @@ export default function Navbar() {
             <button className="btn btn-secondary" onClick={() => handleNav('/my-bookings')}>
               Vé của tôi
             </button>
+            <button className="btn btn-secondary" onClick={() => handleNav('/activity')}>
+              Lịch sử
+            </button>
             <span className="navbar-username">{user.fullName}</span>
             <button className="btn btn-secondary" onClick={handleLogout}>
               Đăng xuất
@@ -65,6 +68,9 @@ export default function Navbar() {
               </button>
               <button className="mobile-menu-item" onClick={() => handleNav('/my-bookings')}>
                 🎫 Vé của tôi
+              </button>
+              <button className="mobile-menu-item" onClick={() => handleNav('/activity')}>
+                📜 Lịch sử hoạt động
               </button>
               <button className="mobile-menu-item mobile-menu-danger" onClick={handleLogout}>
                 🚪 Đăng xuất ({user.fullName})

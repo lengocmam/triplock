@@ -8,6 +8,9 @@ import { JwtService } from '@nestjs/jwt';
 import Redis from 'ioredis';
 import { UsersService } from '../users/users.service';
 import { REDIS_CLIENT } from '../redis/redis.module';
+import { ActivityLogService } from '../activity-log/activity-log.service';
+import { ActivityAction } from '../activity-log/entities/activity-log.entity';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -15,14 +18,20 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     @Inject(REDIS_CLIENT) private redis: Redis,
+    private activityLogService: ActivityLogService,
+    private mailService: MailService,
   ) {}
 
   async register(email: string, password: string, fullName: string) {
     const user = await this.usersService.create(email, password, fullName);
+    await this.activityLogService.log(
+      user.id,
+      ActivityAction.REGISTER,
+      `Tài khoản ${email} vừa được tạo`,
+    );
     return { id: user.id, email: user.email, fullName: user.fullName };
   }
 
-  // Giả lập gửi OTP: tạo mã 6 số, lưu Redis với TTL 5 phút
   async sendOtp(email: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
@@ -31,13 +40,12 @@ export class AuthService {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const key = `otp:${email}`;
+    await this.redis.set(key, otp, 'EX', 300);
 
-    await this.redis.set(key, otp, 'EX', 300); // hết hạn sau 300s = 5 phút
+    // Gửi email thật thay vì chỉ log ra console
+    await this.mailService.sendOtpEmail(email, otp);
 
-    // Thực tế sẽ gọi service SMS/Email ở đây. Giờ chỉ log ra console để demo.
-    console.log(`[OTP giả lập] Gửi tới ${email}: ${otp}`);
-
-    return { message: 'OTP đã được gửi (xem console log)' };
+    return { message: 'OTP đã được gửi tới email của bạn' };
   }
 
   async verifyOtp(email: string, otp: string) {
@@ -54,7 +62,13 @@ export class AuthService {
     }
 
     await this.usersService.markAsVerified(user.id);
-    await this.redis.del(key); // xóa OTP sau khi dùng, tránh dùng lại
+    await this.redis.del(key);
+
+    await this.activityLogService.log(
+      user.id,
+      ActivityAction.VERIFY_OTP,
+      'Xác thực OTP thành công',
+    );
 
     return { message: 'Xác thực thành công' };
   }
@@ -72,6 +86,8 @@ export class AuthService {
 
     const payload = { sub: user.id, email: user.email, role: user.role };
     const token = this.jwtService.sign(payload);
+
+    await this.activityLogService.log(user.id, ActivityAction.LOGIN, 'Đăng nhập vào hệ thống');
 
     return {
       accessToken: token,

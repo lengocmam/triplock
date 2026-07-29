@@ -2,8 +2,7 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User } from './entities/user.entity';
-
+import { User, UserRole } from './entities/user.entity';
 @Injectable()
 export class UsersService {
   constructor(
@@ -46,5 +45,12 @@ export class UsersService {
 
   async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
     return bcrypt.compare(plainPassword, hashedPassword);
+  }
+
+  async promoteToAdmin(email: string): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { email } });
+    if (!user) throw new NotFoundException('Không tìm thấy user');
+    user.role = UserRole.ADMIN;
+    return this.usersRepository.save(user);
   }
 }

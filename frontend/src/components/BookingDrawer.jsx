@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import apiClient from '../api/client';
 import { useSocket } from '../hooks/useSocket';
 import { useToast } from '../context/ToastContext';
+import QrPayment from './QrPayment';
 
 function formatDateTime(dateStr) {
   const d = new Date(dateStr);
@@ -197,13 +198,12 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
     setStep('payment');
   };
 
-  const handlePay = async () => {
-    if (myBookings.length === 0) return;
+  const handleQrPaymentSuccess = async (sessionId) => {
     setSubmitting(true);
     setError('');
     try {
-      const res = await apiClient.post('/bookings/confirm-multiple', {
-        bookingIds: myBookings.map((b) => b.id),
+      const res = await apiClient.post('/bookings/confirm-qr-payment', {
+        sessionId,
         passengers: myBookings.map((b) => ({
           bookingId: b.id,
           passengerName: passengers[b.id].name,
@@ -214,7 +214,7 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
       setStep('success');
       addToast('Đã gửi vé điện tử qua email của bạn', 'success');
     } catch (err) {
-      setError(err.response?.data?.message || 'Thanh toán thất bại');
+      setError(err.response?.data?.message || 'Xác nhận thanh toán thất bại');
     } finally {
       setSubmitting(false);
     }
@@ -486,7 +486,7 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
         {step === 'payment' && (
           <>
             <div className="booking-banner">
-              Còn <strong>{countdown}s</strong> để hoàn tất thanh toán
+              Còn <strong className={countdown <= 30 ? 'countdown-urgent' : ''}>{countdown}s</strong> để hoàn tất thanh toán
             </div>
 
             <div className="card" style={{ marginBottom: 16 }}>
@@ -498,17 +498,16 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
                     justifyContent: 'space-between',
                     marginBottom: 8,
                     paddingBottom: 8,
-                    borderBottom: idx < myBookings.length - 1 ? '1px dashed #eef2f7' : 'none',
+                    borderBottom: idx < myBookings.length - 1 ? '1px dashed var(--border-color)' : 'none',
                   }}
                 >
-                  <span>
-                    {passengers[b.id]?.name} — Ghế {b.seat.seatNumber}
-                  </span>
+                  <span>{passengers[b.id]?.name} — Ghế {b.seat.seatNumber}</span>
                   <strong>{Number(selectedFare?.price).toLocaleString('vi-VN')} đ</strong>
                 </div>
               ))}
+
               {priceBreakdown && (
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #eef2f7', fontSize: 13, color: '#6b7280' }}>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-color)', fontSize: 13, color: 'var(--text-secondary)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                     <span>Giá vé × {priceBreakdown.passengerCount}</span>
                     <span>{(priceBreakdown.perPassenger.fareBasePrice * priceBreakdown.passengerCount).toLocaleString('vi-VN')} đ</span>
@@ -521,9 +520,9 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
                     <span>Phí dịch vụ × {priceBreakdown.passengerCount}</span>
                     <span>{(priceBreakdown.perPassenger.serviceFee * priceBreakdown.passengerCount).toLocaleString('vi-VN')} đ</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px dashed #eef2f7' }}>
-                    <strong style={{ color: '#1a1a2e' }}>Tổng thanh toán</strong>
-                    <strong style={{ color: '#0071eb', fontSize: 18 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px dashed var(--border-color)' }}>
+                    <strong style={{ color: 'var(--text-primary)' }}>Tổng thanh toán</strong>
+                    <strong style={{ color: 'var(--accent)', fontSize: 18 }}>
                       {priceBreakdown.grandTotal.toLocaleString('vi-VN')} đ
                     </strong>
                   </div>
@@ -531,41 +530,17 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
               )}
             </div>
 
-            <div className="fare-name" style={{ marginBottom: 10 }}>Phương thức thanh toán</div>
-            {[
-              { id: 'card', label: '💳 Thẻ tín dụng / ghi nợ' },
-              { id: 'momo', label: '📱 Ví MoMo' },
-              { id: 'zalopay', label: '🔵 ZaloPay' },
-            ].map((m) => (
-              <label
-                key={m.id}
-                className="fare-card"
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  padding: '14px 16px',
-                  marginBottom: 10,
-                  cursor: 'pointer',
-                  borderColor: paymentMethod === m.id ? '#0071eb' : '#eef2f7',
-                }}
-              >
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={paymentMethod === m.id}
-                  onChange={() => setPaymentMethod(m.id)}
-                  style={{ marginRight: 10 }}
-                />
-                {m.label}
-              </label>
-            ))}
+            {priceBreakdown && (
+              <QrPayment
+                bookingIds={myBookings.map((b) => b.id)}
+                amount={priceBreakdown.grandTotal}
+                onSuccess={handleQrPaymentSuccess}
+                onError={(msg) => setError(msg)}
+              />
+            )}
 
-            <div className="modal-footer">
-              <button className="btn btn-primary" disabled={submitting || !priceBreakdown} onClick={handlePay}>
-                {submitting
-                  ? 'Đang xử lý...'
-                  : `Thanh toán ${priceBreakdown ? priceBreakdown.grandTotal.toLocaleString('vi-VN') : '...'} đ`}
-              </button>
+            <div className="modal-footer" style={{ justifyContent: 'flex-start' }}>
+              <button className="btn btn-secondary" onClick={() => setStep('passenger')}>← Quay lại</button>
             </div>
           </>
         )}
@@ -591,10 +566,15 @@ export default function BookingDrawer({ flightId, onClose, onDone }) {
                   style={{
                     fontSize: 14,
                     padding: '8px 0',
-                    borderBottom: '1px solid #f0f2f5',
+                    borderBottom: '1px solid var(--border-color)',
                   }}
                 >
                   <strong>{b.passengerName}</strong> — Ghế {b.seat.seatNumber}
+                  {b.payment && (
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                      Mã giao dịch: {b.payment.transactionCode}
+                    </div>
+                  )}
                 </div>
               ))}
               <div style={{ fontSize: 13, color: '#6b7280', marginTop: 10 }}>
