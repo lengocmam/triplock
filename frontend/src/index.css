@@ -1314,3 +1314,121 @@ body {
   60% { transform: scale(1.2); }
   100% { transform: scale(1); }
 }
+
+.admin-layout {
+  display: flex;
+  min-height: calc(100vh - 65px);
+}
+
+.admin-sidebar {
+  width: 220px;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  padding: 20px 0;
+  flex-shrink: 0;
+}
+
+.admin-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  border-left: 3px solid transparent;
+}
+.admin-sidebar-item:hover {
+  background: var(--bg-hover);
+}
+.admin-sidebar-item.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.admin-content {
+  flex: 1;
+  padding: 28px 32px;
+  max-width: 1100px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 10px var(--shadow-color);
+}
+.stat-card-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.stat-card-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.stat-card-value.stat-positive { color: #12a150; }
+.stat-card-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.admin-panel {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 10px var(--shadow-color);
+  margin-bottom: 24px;
+}
+.admin-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.admin-table th {
+  text-align: left;
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+}
+.admin-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.admin-table tr:hover td {
+  background: var(--bg-hover);
+}
+
+.admin-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.admin-badge-good { background: #eafaf0; color: #12a150; }
+.admin-badge-warn { background: #fff8e6; color: #f5a623; }
+.admin-badge-bad { background: #fdeeee; color: #d9364f; }
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}

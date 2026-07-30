@@ -100,14 +100,25 @@ export class AdminService {
     });
 
     const routeMap: Record<string, { route: string; revenue: number; bookingCount: number }> = {};
+    let skippedCount = 0;
 
     for (const booking of bookings) {
+      // Bỏ qua booking bị thiếu quan hệ (dữ liệu mồ côi/không toàn vẹn) thay vì crash cả API
+      if (!booking.seat || !booking.seat.flight || !booking.fareClass) {
+        skippedCount++;
+        continue;
+      }
+
       const route = `${booking.seat.flight.departureCity} → ${booking.seat.flight.arrivalCity}`;
       if (!routeMap[route]) {
         routeMap[route] = { route, revenue: 0, bookingCount: 0 };
       }
       routeMap[route].revenue += Number(booking.fareClass.price);
       routeMap[route].bookingCount += 1;
+    }
+
+    if (skippedCount > 0) {
+      console.warn(`[getTopRoutes] Bỏ qua ${skippedCount} booking thiếu quan hệ dữ liệu`);
     }
 
     return Object.values(routeMap)
@@ -124,6 +135,7 @@ export class AdminService {
 
     const breakdown: Record<string, number> = {};
     for (const b of bookings) {
+      if (!b.fareClass) continue; // bỏ qua booking thiếu quan hệ fareClass
       const name = b.fareClass.name;
       breakdown[name] = (breakdown[name] || 0) + 1;
     }
@@ -199,5 +211,24 @@ export class AdminService {
       order: { createdAt: 'DESC' },
       take: 100,
     });
+  }
+
+  async updateFlight(flightId: string, data: Partial<{
+    flightCode: string; departureCity: string; arrivalCity: string;
+    departureTime: Date; arrivalTime: Date; price: number;
+  }>) {
+    await this.flightsRepository.update(flightId, data);
+    return this.flightsRepository.findOne({ where: { id: flightId } });
+  }
+
+  async getFareClassesForFlight(flightId: string) {
+    return this.flightsService.getFareClasses(flightId);
+  }
+
+  async updateFareClass(fareClassId: string, data: Partial<{
+    price: number; carryOnKg: number; checkedBaggageKg: number;
+    refundable: boolean; changeable: boolean; note: string;
+  }>) {
+    return this.flightsService.updateFareClass(fareClassId, data);
   }
 }

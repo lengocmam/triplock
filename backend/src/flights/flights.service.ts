@@ -179,4 +179,9 @@ export class FlightsService {
       where: { flight: { id: flightId }, status: SeatStatus.AVAILABLE },
     });
   }
+
+  async updateFareClass(fareClassId: string, data: Partial<FareClass>) {
+    await this.fareClassRepository.update(fareClassId, data);
+    return this.fareClassRepository.findOne({ where: { id: fareClassId } });
+  }
 }

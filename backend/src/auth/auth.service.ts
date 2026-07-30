@@ -86,6 +86,7 @@ export class AuthService {
 
     const payload = { sub: user.id, email: user.email, role: user.role };
     const token = this.jwtService.sign(payload);
+    
 
     await this.activityLogService.log(user.id, ActivityAction.LOGIN, 'Đăng nhập vào hệ thống');
 
@@ -96,6 +97,7 @@ export class AuthService {
         email: user.email,
         fullName: user.fullName,
         isVerified: user.isVerified,
+        role: user.role,
       },
     };
   }

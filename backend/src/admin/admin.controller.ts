@@ -1,15 +1,19 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { AdminService } from './admin.service';
+import { MockDataService } from './mock-data.service';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AdminController {
-  constructor(private adminService: AdminService) {}
+  constructor(
+    private adminService: AdminService,
+    private mockDataService: MockDataService,
+  ) {}
 
   @Get('dashboard-stats')
   getDashboardStats() {
@@ -41,9 +45,24 @@ export class AdminController {
     return this.adminService.createFlight(body);
   }
 
+  @Put('flights/:id')
+  updateFlight(@Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateFlight(id, body);
+  }
+
   @Delete('flights/:id')
   deleteFlight(@Param('id') id: string) {
     return this.adminService.deleteFlight(id);
+  }
+
+  @Get('flights/:id/fares')
+  getFares(@Param('id') id: string) {
+    return this.adminService.getFareClassesForFlight(id);
+  }
+
+  @Put('fare-classes/:id')
+  updateFareClass(@Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateFareClass(id, body);
   }
 
   @Get('users')
@@ -54,5 +73,10 @@ export class AdminController {
   @Get('bookings')
   getAllBookings() {
     return this.adminService.getAllBookings();
+  }
+
+  @Post('seed-mock-data')
+  seedMockData() {
+    return this.mockDataService.seedAll();
   }
 }

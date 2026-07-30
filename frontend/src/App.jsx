@@ -4,9 +4,15 @@ import RegisterPage from './pages/RegisterPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
 import FlightListPage from './pages/FlightListPage';
 import MyBookingsPage from './pages/MyBookingsPage';
-import NotFoundPage from './pages/NotFoundPage';
-import { useAuth } from './context/AuthContext';
 import ActivityLogPage from './pages/ActivityLogPage';
+import NotFoundPage from './pages/NotFoundPage';
+import AdminRoute from './components/AdminRoute';
+import AdminLayout from './components/AdminLayout';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminFlightsPage from './pages/admin/AdminFlightsPage';
+import AdminBookingsPage from './pages/admin/AdminBookingsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import { useAuth } from './context/AuthContext';
 
 function App() {
   const { user } = useAuth();
@@ -18,9 +24,17 @@ function App() {
       <Route path="/verify-otp" element={<VerifyOtpPage />} />
       <Route path="/flights" element={user ? <FlightListPage /> : <Navigate to="/login" />} />
       <Route path="/my-bookings" element={user ? <MyBookingsPage /> : <Navigate to="/login" />} />
+      <Route path="/activity" element={user ? <ActivityLogPage /> : <Navigate to="/login" />} />
+
+      <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="flights" element={<AdminFlightsPage />} />
+        <Route path="bookings" element={<AdminBookingsPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+      </Route>
+
       <Route path="/" element={<Navigate to="/flights" />} />
       <Route path="*" element={<NotFoundPage />} />
-      <Route path="/activity" element={user ? <ActivityLogPage /> : <Navigate to="/login" />} />
     </Routes>
   );
 }

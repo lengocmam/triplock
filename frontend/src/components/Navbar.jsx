@@ -32,6 +32,11 @@ export default function Navbar() {
         </button>
         {user ? (
           <>
+            {user.role === 'admin' && (
+              <button className="btn btn-primary" onClick={() => handleNav('/admin')}>
+                🛠️ Quản trị
+              </button>
+            )}
             <button className="btn btn-secondary" onClick={() => handleNav('/my-bookings')}>
               Vé của tôi
             </button>
