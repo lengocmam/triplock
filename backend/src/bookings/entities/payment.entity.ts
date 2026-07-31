@@ -5,6 +5,7 @@ import {
   OneToOne,
   JoinColumn,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { Booking } from './booking.entity';
 
@@ -20,6 +21,7 @@ export enum PaymentMethod {
 }
 
 @Entity('payments')
+@Index(['status', 'paidAt']) // composite index — khớp đúng pattern query dashboard (WHERE status = ... AND paidAt >= ...)
 export class Payment {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -28,7 +30,6 @@ export class Payment {
   @JoinColumn()
   booking!: Booking;
 
-  // Mã giao dịch — dùng để tra cứu, đối soát, hiển thị cho khách khi cần khiếu nại
   @Column({ unique: true })
   transactionCode!: string;
 
@@ -41,7 +42,6 @@ export class Payment {
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
   status!: PaymentStatus;
 
-  // Tham chiếu tới sessionId của phiên QR — để trace lại nếu có tranh chấp
   @Column({ nullable: true })
   paymentSessionId!: string;
 

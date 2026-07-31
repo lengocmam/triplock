@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { AdminService } from './admin.service';
 import { MockDataService } from './mock-data.service';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -36,8 +37,8 @@ export class AdminController {
   }
 
   @Get('flights')
-  getAllFlights() {
-    return this.adminService.getAllFlightsWithStats();
+  getAllFlights(@Query('page') page = '1', @Query('limit') limit = '20') {
+    return this.adminService.getAllFlightsWithStats(Number(page), Number(limit));
   }
 
   @Post('flights')
@@ -66,17 +67,19 @@ export class AdminController {
   }
 
   @Get('users')
-  getAllUsers() {
-    return this.adminService.getAllUsers();
+  getAllUsers(@Query('page') page = '1', @Query('limit') limit = '20') {
+    return this.adminService.getAllUsers(Number(page), Number(limit));
   }
 
   @Get('bookings')
-  getAllBookings() {
-    return this.adminService.getAllBookings();
+  getAllBookings(@Query('page') page = '1', @Query('limit') limit = '20') {
+    return this.adminService.getAllBookings(Number(page), Number(limit));
   }
 
+  @Throttle({ default: { limit: 2, ttl: 3600000 } }) // tối đa 2 lần/giờ
   @Post('seed-mock-data')
   seedMockData() {
     return this.mockDataService.seedAll();
   }
+  
 }

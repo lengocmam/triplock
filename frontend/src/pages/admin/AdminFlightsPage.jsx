@@ -31,7 +31,7 @@ export default function AdminFlightsPage() {
 
   const loadFlights = () => {
     setLoading(true);
-    apiClient.get('/admin/flights').then((res) => setFlights(res.data)).finally(() => setLoading(false));
+    apiClient.get('/admin/flights?limit=100').then((res) => setFlights(res.data.items)).finally(() => setLoading(false));
   };
 
   useEffect(() => {

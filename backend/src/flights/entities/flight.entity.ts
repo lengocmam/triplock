@@ -1,13 +1,10 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Index } from 'typeorm';
 import { Seat } from './seat.entity';
 import { FareClass } from './fare-class.entity';
 
 @Entity('flights')
+@Index(['departureCity', 'arrivalCity']) // khớp đúng pattern search phổ biến nhất
+@Index(['departureTime'])
 export class Flight {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -28,7 +25,7 @@ export class Flight {
   arrivalTime!: Date;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  price!: number; // giá thấp nhất, hiển thị ở list — vẫn giữ để không phá vỡ code cũ
+  price!: number;
 
   @OneToMany(() => Seat, (seat) => seat.flight)
   seats!: Seat[];

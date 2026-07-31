@@ -6,6 +6,7 @@ import {
   OneToOne,
   JoinColumn,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Seat } from '../../flights/entities/seat.entity';
@@ -20,6 +21,8 @@ export enum BookingStatus {
 }
 
 @Entity('bookings')
+@Index(['status']) // dùng trong hầu hết mọi query lọc theo trạng thái
+@Index(['lockExpiresAt']) // dùng bởi cron job dọn ghế hết hạn
 export class Booking {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -27,7 +30,7 @@ export class Booking {
   @ManyToOne(() => User, (user) => user.bookings)
   user!: User;
 
-  @OneToOne(() => Seat, (seat) => seat.booking)
+  @OneToOne(() => Seat, (seat) => seat.booking, { onDelete: 'CASCADE' })
   @JoinColumn()
   seat!: Seat;
 
@@ -43,9 +46,6 @@ export class Booking {
   @OneToOne(() => Payment, (payment) => payment.booking)
   payment!: Payment;
 
-  @CreateDateColumn()
-  createdAt!: Date;
-
   @Column({ nullable: true })
   passengerName!: string;
 
@@ -54,4 +54,7 @@ export class Booking {
 
   @Column({ nullable: true })
   bookingCode!: string;
+
+  @CreateDateColumn()
+  createdAt!: Date;
 }

@@ -11,7 +11,7 @@ export class FareClass {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Flight, (flight) => flight.fareClasses)
+  @ManyToOne(() => Flight, (flight) => flight.fareClasses, { onDelete: 'CASCADE' })
   flight!: Flight;
 
   @Column()

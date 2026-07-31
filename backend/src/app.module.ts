@@ -14,10 +14,25 @@ import { ActivityLogModule } from './activity-log/activity-log.module';
 import { MailModule } from './mail/mail.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdminModule } from './admin/admin.module';
+import * as Joi from 'joi';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ 
+        isGlobal: true,
+        validationSchema: Joi.object({
+          DATABASE_HOST: Joi.string().required(),
+          DATABASE_PORT: Joi.number().default(5432),
+          DATABASE_USER: Joi.string().required(),
+          DATABASE_PASSWORD: Joi.string().required(),
+          DATABASE_NAME: Joi.string().required(),
+          REDIS_HOST: Joi.string().required(),
+          REDIS_PORT: Joi.number().default(6379),
+          JWT_SECRET: Joi.string().min(32).required(),
+          JWT_EXPIRES_IN: Joi.string().default('7d'),
+          PORT: Joi.number().default(3000),
+        }),
+    }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
