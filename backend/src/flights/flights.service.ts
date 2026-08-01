@@ -24,13 +24,19 @@ export class FlightsService {
     const query = this.flightsRepository.createQueryBuilder('flight');
 
     if (filters?.departureCity) {
-      query.andWhere('flight.departureCity ILIKE :dep', { dep: `%${filters.departureCity}%` });
+      query.andWhere('flight.departureCity ILIKE :dep', {
+        dep: `%${filters.departureCity}%`,
+      });
     }
     if (filters?.arrivalCity) {
-      query.andWhere('flight.arrivalCity ILIKE :arr', { arr: `%${filters.arrivalCity}%` });
+      query.andWhere('flight.arrivalCity ILIKE :arr', {
+        arr: `%${filters.arrivalCity}%`,
+      });
     }
     if (filters?.date) {
-      query.andWhere('DATE(flight.departureTime) = :date', { date: filters.date });
+      query.andWhere('DATE(flight.departureTime) = :date', {
+        date: filters.date,
+      });
     }
 
     query.orderBy('flight.departureTime', 'ASC');

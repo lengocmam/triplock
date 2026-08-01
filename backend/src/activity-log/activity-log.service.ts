@@ -22,7 +22,7 @@ export class ActivityLogService {
   ): Promise<void> {
     try {
       const entry = this.activityLogRepository.create({
-        user: { id: userId } as any,
+        user: { id: userId },
         action,
         description,
         metadata,

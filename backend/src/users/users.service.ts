@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -11,7 +15,11 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  async create(email: string, password: string, fullName: string): Promise<User> {
+  async create(
+    email: string,
+    password: string,
+    fullName: string,
+  ): Promise<User> {
     const existing = await this.usersRepository.findOne({ where: { email } });
     if (existing) {
       throw new ConflictException('Email đã được sử dụng');
@@ -44,7 +52,10 @@ export class UsersService {
     await this.usersRepository.update(id, { isVerified: true });
   }
 
-  async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
+  async validatePassword(
+    plainPassword: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
     return bcrypt.compare(plainPassword, hashedPassword);
   }
 

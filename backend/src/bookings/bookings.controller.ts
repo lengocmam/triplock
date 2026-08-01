@@ -29,11 +29,19 @@ export class BookingsController {
     @Body()
     body: {
       bookingIds: string[];
-      passengers: { bookingId: string; passengerName: string; passengerPhone: string }[];
+      passengers: {
+        bookingId: string;
+        passengerName: string;
+        passengerPhone: string;
+      }[];
     },
     @Request() req: any,
   ) {
-    return this.bookingsService.confirmMultiple(body.bookingIds, body.passengers, req.user.userId);
+    return this.bookingsService.confirmMultiple(
+      body.bookingIds,
+      body.passengers,
+      req.user.userId,
+    );
   }
 
   @Post('cancel/:bookingId')
@@ -47,18 +55,32 @@ export class BookingsController {
   }
 
   @Post('cancel-confirmed/:bookingId')
-  cancelConfirmedBooking(@Param('bookingId') bookingId: string, @Request() req: any) {
-    return this.bookingsService.cancelConfirmedBooking(bookingId, req.user.userId);
+  cancelConfirmedBooking(
+    @Param('bookingId') bookingId: string,
+    @Request() req: any,
+  ) {
+    return this.bookingsService.cancelConfirmedBooking(
+      bookingId,
+      req.user.userId,
+    );
   }
 
   @Post('price-breakdown')
-  async priceBreakdown(@Body() body: { fareClassId: string; passengerCount: number }) {
-    return this.bookingsService.getPriceBreakdown(body.fareClassId, body.passengerCount);
+  async priceBreakdown(
+    @Body() body: { fareClassId: string; passengerCount: number },
+  ) {
+    return this.bookingsService.getPriceBreakdown(
+      body.fareClassId,
+      body.passengerCount,
+    );
   }
 
   @Post('create-qr-payment')
   createQrPayment(@Body() body: { bookingIds: string[] }, @Request() req: any) {
-    return this.bookingsService.createQrPaymentSession(body.bookingIds, req.user.userId);
+    return this.bookingsService.createQrPaymentSession(
+      body.bookingIds,
+      req.user.userId,
+    );
   }
 
   @Post('confirm-qr-payment')
@@ -66,12 +88,20 @@ export class BookingsController {
     @Body()
     body: {
       sessionId: string;
-      passengers: { bookingId: string; passengerName: string; passengerPhone: string }[];
+      passengers: {
+        bookingId: string;
+        passengerName: string;
+        passengerPhone: string;
+      }[];
     },
     @Request() req: any,
   ) {
-    return this.bookingsService.confirmQrPayment(body.sessionId, body.passengers, req.user.userId);
-  }  
+    return this.bookingsService.confirmQrPayment(
+      body.sessionId,
+      body.passengers,
+      req.user.userId,
+    );
+  }
 
   @Get('my-payments')
   myPayments(@Request() req: any) {

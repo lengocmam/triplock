@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsDateString, Min, Max, Length } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsDateString,
+  Min,
+  Max,
+  Length,
+} from 'class-validator';
 
 export class CreateFlightDto {
   @IsString()

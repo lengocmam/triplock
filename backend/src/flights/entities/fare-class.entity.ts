@@ -1,9 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Flight } from './flight.entity';
 
 @Entity('fare_classes')
@@ -11,7 +6,9 @@ export class FareClass {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Flight, (flight) => flight.fareClasses, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Flight, (flight) => flight.fareClasses, {
+    onDelete: 'CASCADE',
+  })
   flight!: Flight;
 
   @Column()

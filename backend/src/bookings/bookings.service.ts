@@ -16,7 +16,11 @@ import { BookingsGateway } from './bookings.gateway';
 import { ActivityLogService } from '../activity-log/activity-log.service';
 import { ActivityAction } from '../activity-log/entities/activity-log.entity';
 import { MailService } from '../mail/mail.service';
-import { Payment, PaymentStatus, PaymentMethod } from './entities/payment.entity';
+import {
+  Payment,
+  PaymentStatus,
+  PaymentMethod,
+} from './entities/payment.entity';
 
 const LOCK_TTL_SECONDS = 300;
 
@@ -46,12 +50,17 @@ export class BookingsService {
   private getLockKey(seatId: string): string {
     return `seat:lock:${seatId}`;
   }
-  
 
-  async lockSeat(seatId: string, fareClassId: string, userId: string): Promise<Booking> {
+  async lockSeat(
+    seatId: string,
+    fareClassId: string,
+    userId: string,
+  ): Promise<Booking> {
     const user = await this.usersService.findById(userId);
     if (!user.isVerified) {
-      throw new ForbiddenException('Tài khoản chưa xác thực, vui lòng verify OTP trước');
+      throw new ForbiddenException(
+        'Tài khoản chưa xác thực, vui lòng verify OTP trước',
+      );
     }
 
     const seat = await this.flightsService.getSeatById(seatId);
@@ -62,10 +71,18 @@ export class BookingsService {
     const fareClass = await this.flightsService.getFareClassById(fareClassId);
 
     const lockKey = this.getLockKey(seatId);
-    const result = await this.redis.set(lockKey, userId, 'EX', LOCK_TTL_SECONDS, 'NX');
+    const result = await this.redis.set(
+      lockKey,
+      userId,
+      'EX',
+      LOCK_TTL_SECONDS,
+      'NX',
+    );
 
     if (result !== 'OK') {
-      throw new BadRequestException('Ghế vừa bị người khác giữ, vui lòng chọn ghế khác');
+      throw new BadRequestException(
+        'Ghế vừa bị người khác giữ, vui lòng chọn ghế khác',
+      );
     }
 
     try {
@@ -74,19 +91,28 @@ export class BookingsService {
       const lockExpiresAt = new Date(Date.now() + LOCK_TTL_SECONDS * 1000);
 
       const booking = this.bookingsRepository.create({
-        user: { id: userId } as any,
-        seat: { id: seatId } as any,
-        fareClass: { id: fareClassId } as any,
+        user: { id: userId },
+        seat: { id: seatId },
+        fareClass: { id: fareClassId },
         status: BookingStatus.PENDING,
         lockExpiresAt,
       });
 
       const saved = await this.bookingsRepository.save(booking);
 
-      this.bookingsGateway.notifySeatLocked(seat.flight.id, seatId, seat.seatNumber);
+      this.bookingsGateway.notifySeatLocked(
+        seat.flight.id,
+        seatId,
+        seat.seatNumber,
+      );
 
-      const availableCount = await this.flightsService.countAvailableSeats(seat.flight.id);
-      this.bookingsGateway.notifyFlightSeatsChanged(seat.flight.id, availableCount);
+      const availableCount = await this.flightsService.countAvailableSeats(
+        seat.flight.id,
+      );
+      this.bookingsGateway.notifyFlightSeatsChanged(
+        seat.flight.id,
+        availableCount,
+      );
 
       await this.activityLogService.log(
         userId,
@@ -107,7 +133,11 @@ export class BookingsService {
   // tránh tình trạng "mua 3 ghế nhưng chỉ 2 ghế thành công" nếu có lỗi giữa chừng
   async confirmMultiple(
     bookingIds: string[],
-    passengers: { bookingId: string; passengerName: string; passengerPhone: string }[],
+    passengers: {
+      bookingId: string;
+      passengerName: string;
+      passengerPhone: string;
+    }[],
     userId: string,
     paymentSessionId?: string,
   ): Promise<Booking[]> {
@@ -115,7 +145,8 @@ export class BookingsService {
       throw new BadRequestException('Không có ghế nào để xác nhận');
     }
 
-    const bookingCode = 'TL' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const bookingCode =
+      'TL' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
     return this.bookingsRepository.manager.transaction(async (manager) => {
       const confirmedBookings: Booking[] = [];
@@ -134,15 +165,21 @@ export class BookingsService {
           throw new ForbiddenException('Có booking không thuộc về bạn');
         }
         if (booking.status !== BookingStatus.PENDING) {
-          throw new BadRequestException(`Ghế ${booking.seat.seatNumber} không ở trạng thái chờ thanh toán`);
+          throw new BadRequestException(
+            `Ghế ${booking.seat.seatNumber} không ở trạng thái chờ thanh toán`,
+          );
         }
         if (new Date() > booking.lockExpiresAt) {
-          throw new BadRequestException(`Đã hết thời gian giữ ghế ${booking.seat.seatNumber}`);
+          throw new BadRequestException(
+            `Đã hết thời gian giữ ghế ${booking.seat.seatNumber}`,
+          );
         }
 
         const passengerInfo = passengers.find((p) => p.bookingId === bookingId);
         if (!passengerInfo) {
-          throw new BadRequestException(`Thiếu thông tin hành khách cho ghế ${booking.seat.seatNumber}`);
+          throw new BadRequestException(
+            `Thiếu thông tin hành khách cho ghế ${booking.seat.seatNumber}`,
+          );
         }
 
         booking.status = BookingStatus.CONFIRMED;
@@ -151,7 +188,9 @@ export class BookingsService {
         booking.bookingCode = bookingCode;
 
         await manager.save(booking);
-        await manager.update('seats', booking.seat.id, { status: SeatStatus.BOOKED });
+        await manager.update('seats', booking.seat.id, {
+          status: SeatStatus.BOOKED,
+        });
 
         totalAmount += Number(booking.fareClass.price);
         confirmedBookings.push(booking);
@@ -160,7 +199,8 @@ export class BookingsService {
       // Tạo 1 bản ghi Payment cho MỖI booking — mỗi ghế có 1 giao dịch riêng, dễ đối soát/tra cứu
       // dù cùng nằm chung 1 lần thanh toán QR (paymentSessionId dùng để nhóm lại khi cần)
       for (const booking of confirmedBookings) {
-        const transactionCode = 'TXN' + Math.random().toString(36).substring(2, 10).toUpperCase();
+        const transactionCode =
+          'TXN' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
         const payment = manager.create(Payment, {
           booking: { id: booking.id } as any,
@@ -187,7 +227,8 @@ export class BookingsService {
 
       if (confirmedBookings.length > 0) {
         const flightId = confirmedBookings[0].seat.flight.id;
-        const availableCount = await this.flightsService.countAvailableSeats(flightId);
+        const availableCount =
+          await this.flightsService.countAvailableSeats(flightId);
         this.bookingsGateway.notifyFlightSeatsChanged(flightId, availableCount);
 
         await this.activityLogService.log(
@@ -232,7 +273,10 @@ export class BookingsService {
     booking.status = BookingStatus.EXPIRED;
     await this.bookingsRepository.save(booking);
 
-    await this.flightsService.updateSeatStatus(booking.seat.id, SeatStatus.AVAILABLE);
+    await this.flightsService.updateSeatStatus(
+      booking.seat.id,
+      SeatStatus.AVAILABLE,
+    );
     await this.redis.del(this.getLockKey(booking.seat.id));
 
     this.bookingsGateway.notifySeatReleased(
@@ -241,8 +285,13 @@ export class BookingsService {
       booking.seat.seatNumber,
     );
 
-    const availableCount = await this.flightsService.countAvailableSeats(booking.seat.flight.id);
-    this.bookingsGateway.notifyFlightSeatsChanged(booking.seat.flight.id, availableCount);
+    const availableCount = await this.flightsService.countAvailableSeats(
+      booking.seat.flight.id,
+    );
+    this.bookingsGateway.notifyFlightSeatsChanged(
+      booking.seat.flight.id,
+      availableCount,
+    );
   }
 
   async findMyBookings(userId: string): Promise<Booking[]> {
@@ -253,7 +302,10 @@ export class BookingsService {
     });
   }
 
-  async cancelConfirmedBooking(bookingId: string, userId: string): Promise<Booking> {
+  async cancelConfirmedBooking(
+    bookingId: string,
+    userId: string,
+  ): Promise<Booking> {
     const booking = await this.bookingsRepository.findOne({
       where: { id: bookingId },
       relations: ['user', 'seat', 'seat.flight', 'fareClass', 'payment'],
@@ -272,7 +324,9 @@ export class BookingsService {
       throw new ForbiddenException('Hạng vé này không hỗ trợ hoàn hủy');
     }
     if (new Date() > booking.seat.flight.departureTime) {
-      throw new BadRequestException('Không thể hủy vé cho chuyến bay đã khởi hành');
+      throw new BadRequestException(
+        'Không thể hủy vé cho chuyến bay đã khởi hành',
+      );
     }
 
     booking.status = BookingStatus.CANCELLED;
@@ -284,7 +338,10 @@ export class BookingsService {
       await this.paymentsRepository.save(booking.payment);
     }
 
-    await this.flightsService.updateSeatStatus(booking.seat.id, SeatStatus.AVAILABLE);
+    await this.flightsService.updateSeatStatus(
+      booking.seat.id,
+      SeatStatus.AVAILABLE,
+    );
 
     this.bookingsGateway.notifySeatReleased(
       booking.seat.flight.id,
@@ -292,14 +349,23 @@ export class BookingsService {
       booking.seat.seatNumber,
     );
 
-    const availableCount = await this.flightsService.countAvailableSeats(booking.seat.flight.id);
-    this.bookingsGateway.notifyFlightSeatsChanged(booking.seat.flight.id, availableCount);
+    const availableCount = await this.flightsService.countAvailableSeats(
+      booking.seat.flight.id,
+    );
+    this.bookingsGateway.notifyFlightSeatsChanged(
+      booking.seat.flight.id,
+      availableCount,
+    );
 
     await this.activityLogService.log(
       userId,
       ActivityAction.CANCEL_BOOKING,
       `Hủy vé ghế ${booking.seat.seatNumber}`,
-      { bookingId, seatNumber: booking.seat.seatNumber, bookingCode: booking.bookingCode },
+      {
+        bookingId,
+        seatNumber: booking.seat.seatNumber,
+        bookingCode: booking.bookingCode,
+      },
     );
 
     return booking;
@@ -317,7 +383,7 @@ export class BookingsService {
   }
 
   // Tạo "phiên thanh toán QR" giả lập — trả về nội dung QR để frontend render
-async createQrPaymentSession(bookingIds: string[], userId: string) {
+  async createQrPaymentSession(bookingIds: string[], userId: string) {
     const bookings = await this.bookingsRepository.find({
       where: bookingIds.map((id) => ({ id })),
       relations: ['user', 'fareClass'],
@@ -327,8 +393,12 @@ async createQrPaymentSession(bookingIds: string[], userId: string) {
       throw new BadRequestException('Booking không hợp lệ');
     }
 
-    const totalAmount = bookings.reduce((sum, b) => sum + Number(b.fareClass.price), 0);
-    const sessionId = 'PAY' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    const totalAmount = bookings.reduce(
+      (sum, b) => sum + Number(b.fareClass.price),
+      0,
+    );
+    const sessionId =
+      'PAY' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
     // Lưu tạm phiên thanh toán vào Redis, TTL 5 phút — khớp với thời gian giữ ghế
     await this.redis.set(
@@ -349,12 +419,18 @@ async createQrPaymentSession(bookingIds: string[], userId: string) {
   // Mô phỏng việc "đã quét xong" -> tiến hành confirm booking thật
   async confirmQrPayment(
     sessionId: string,
-    passengers: { bookingId: string; passengerName: string; passengerPhone: string }[],
+    passengers: {
+      bookingId: string;
+      passengerName: string;
+      passengerPhone: string;
+    }[],
     userId: string,
   ) {
     const raw = await this.redis.get(`payment_session:${sessionId}`);
     if (!raw) {
-      throw new BadRequestException('Phiên thanh toán đã hết hạn hoặc không tồn tại');
+      throw new BadRequestException(
+        'Phiên thanh toán đã hết hạn hoặc không tồn tại',
+      );
     }
 
     const session = JSON.parse(raw);
@@ -362,7 +438,12 @@ async createQrPaymentSession(bookingIds: string[], userId: string) {
       throw new ForbiddenException('Phiên thanh toán không thuộc về bạn');
     }
 
-    const result = await this.confirmMultiple(session.bookingIds, passengers, userId, sessionId);
+    const result = await this.confirmMultiple(
+      session.bookingIds,
+      passengers,
+      userId,
+      sessionId,
+    );
 
     await this.redis.del(`payment_session:${sessionId}`);
 

@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { Seat } from './seat.entity';
 import { FareClass } from './fare-class.entity';
 

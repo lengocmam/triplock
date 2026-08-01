@@ -18,20 +18,20 @@ import * as Joi from 'joi';
 import { HealthModule } from './health/health.module';
 @Module({
   imports: [
-    ConfigModule.forRoot({ 
-        isGlobal: true,
-        validationSchema: Joi.object({
-          DATABASE_HOST: Joi.string().required(),
-          DATABASE_PORT: Joi.number().default(5432),
-          DATABASE_USER: Joi.string().required(),
-          DATABASE_PASSWORD: Joi.string().required(),
-          DATABASE_NAME: Joi.string().required(),
-          REDIS_HOST: Joi.string().required(),
-          REDIS_PORT: Joi.number().default(6379),
-          JWT_SECRET: Joi.string().min(32).required(),
-          JWT_EXPIRES_IN: Joi.string().default('7d'),
-          PORT: Joi.number().default(3000),
-        }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: Joi.object({
+        DATABASE_HOST: Joi.string().required(),
+        DATABASE_PORT: Joi.number().default(5432),
+        DATABASE_USER: Joi.string().required(),
+        DATABASE_PASSWORD: Joi.string().required(),
+        DATABASE_NAME: Joi.string().required(),
+        REDIS_HOST: Joi.string().required(),
+        REDIS_PORT: Joi.number().default(6379),
+        JWT_SECRET: Joi.string().min(32).required(),
+        JWT_EXPIRES_IN: Joi.string().default('7d'),
+        PORT: Joi.number().default(3000),
+      }),
     }),
     HealthModule,
     ScheduleModule.forRoot(),
@@ -59,7 +59,7 @@ import { HealthModule } from './health/health.module';
       }),
     }),
     RedisModule,
-    ActivityLogModule, 
+    ActivityLogModule,
     UsersModule,
     FlightsModule,
     BookingsModule,
@@ -68,9 +68,6 @@ import { HealthModule } from './health/health.module';
     AdminModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-  ],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

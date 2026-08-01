@@ -46,7 +46,9 @@ describe('BookingsService', () => {
     };
 
     mockUsersService = {
-      findById: jest.fn().mockResolvedValue({ id: mockUserId, isVerified: true }),
+      findById: jest
+        .fn()
+        .mockResolvedValue({ id: mockUserId, isVerified: true }),
     };
 
     mockGateway = {
@@ -104,7 +106,10 @@ describe('BookingsService', () => {
     });
 
     it('nên báo lỗi khi user chưa xác thực OTP (isVerified = false)', async () => {
-      mockUsersService.findById.mockResolvedValue({ id: mockUserId, isVerified: false });
+      mockUsersService.findById.mockResolvedValue({
+        id: mockUserId,
+        isVerified: false,
+      });
 
       await expect(service.lockSeat(mockSeatId, mockUserId)).rejects.toThrow(
         ForbiddenException,
@@ -131,7 +136,9 @@ describe('BookingsService', () => {
       mockRedis.set.mockResolvedValue('OK');
       mockBookingRepo.save.mockRejectedValue(new Error('DB lỗi giả lập'));
 
-      await expect(service.lockSeat(mockSeatId, mockUserId)).rejects.toThrow('DB lỗi giả lập');
+      await expect(service.lockSeat(mockSeatId, mockUserId)).rejects.toThrow(
+        'DB lỗi giả lập',
+      );
 
       // Đây là điểm quan trọng: nếu DB lưu lỗi, phải xóa lock Redis
       // để tránh tình trạng "kẹt ghế" (ghế bị khóa vĩnh viễn dù không có booking nào)

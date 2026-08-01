@@ -28,7 +28,9 @@ export class BookingsCleanupService {
 
     if (expired.length === 0) return;
 
-    this.logger.log(`Phát hiện ${expired.length} ghế hết hạn giữ chỗ — đang giải phóng...`);
+    this.logger.log(
+      `Phát hiện ${expired.length} ghế hết hạn giữ chỗ — đang giải phóng...`,
+    );
 
     for (const booking of expired) {
       await this.bookingsService.releaseSeat(booking.id);

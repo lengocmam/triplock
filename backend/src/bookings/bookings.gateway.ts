@@ -10,11 +10,16 @@ import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
-    origin: [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:5173'],
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'http://localhost:5173',
+    ],
     credentials: true,
   },
 })
-export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class BookingsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server!: Server;
 
@@ -49,18 +54,26 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   notifySeatLocked(flightId: string, seatId: string, seatNumber: string) {
-    this.server.to(`flight:${flightId}`).emit('seatLocked', { seatId, seatNumber });
+    this.server
+      .to(`flight:${flightId}`)
+      .emit('seatLocked', { seatId, seatNumber });
   }
 
   notifySeatReleased(flightId: string, seatId: string, seatNumber: string) {
-    this.server.to(`flight:${flightId}`).emit('seatReleased', { seatId, seatNumber });
+    this.server
+      .to(`flight:${flightId}`)
+      .emit('seatReleased', { seatId, seatNumber });
   }
 
   notifySeatBooked(flightId: string, seatId: string, seatNumber: string) {
-    this.server.to(`flight:${flightId}`).emit('seatBooked', { seatId, seatNumber });
+    this.server
+      .to(`flight:${flightId}`)
+      .emit('seatBooked', { seatId, seatNumber });
   }
 
   notifyFlightSeatsChanged(flightId: string, availableSeats: number) {
-    this.server.to('flights_lobby').emit('flightSeatsChanged', { flightId, availableSeats });
+    this.server
+      .to('flights_lobby')
+      .emit('flightSeatsChanged', { flightId, availableSeats });
   }
 }

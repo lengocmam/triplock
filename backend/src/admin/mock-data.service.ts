@@ -8,12 +8,75 @@ import { Flight } from '../flights/entities/flight.entity';
 import { Seat, SeatStatus } from '../flights/entities/seat.entity';
 import { FareClass } from '../flights/entities/fare-class.entity';
 import { Booking, BookingStatus } from '../bookings/entities/booking.entity';
-import { Payment, PaymentStatus, PaymentMethod } from '../bookings/entities/payment.entity';
+import {
+  Payment,
+  PaymentStatus,
+  PaymentMethod,
+} from '../bookings/entities/payment.entity';
 
-const FIRST_NAMES = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Ngô', 'Dương', 'Lý'];
-const MIDDLE_NAMES = ['Văn', 'Thị', 'Hữu', 'Minh', 'Ngọc', 'Thành', 'Đức', 'Quang', 'Anh', 'Xuân'];
-const LAST_NAMES = ['An', 'Bình', 'Cường', 'Dũng', 'Em', 'Phong', 'Giang', 'Hà', 'Huy', 'Khang', 'Lan', 'Mai', 'Nam', 'Oanh', 'Phúc', 'Quân', 'Sơn', 'Thảo', 'Uyên', 'Việt'];
-const CITIES = ['Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng', 'Nha Trang', 'Phú Quốc', 'Huế', 'Đà Lạt', 'Cần Thơ', 'Hải Phòng', 'Quy Nhơn'];
+const FIRST_NAMES = [
+  'Nguyễn',
+  'Trần',
+  'Lê',
+  'Phạm',
+  'Hoàng',
+  'Huỳnh',
+  'Phan',
+  'Vũ',
+  'Võ',
+  'Đặng',
+  'Bùi',
+  'Đỗ',
+  'Ngô',
+  'Dương',
+  'Lý',
+];
+const MIDDLE_NAMES = [
+  'Văn',
+  'Thị',
+  'Hữu',
+  'Minh',
+  'Ngọc',
+  'Thành',
+  'Đức',
+  'Quang',
+  'Anh',
+  'Xuân',
+];
+const LAST_NAMES = [
+  'An',
+  'Bình',
+  'Cường',
+  'Dũng',
+  'Em',
+  'Phong',
+  'Giang',
+  'Hà',
+  'Huy',
+  'Khang',
+  'Lan',
+  'Mai',
+  'Nam',
+  'Oanh',
+  'Phúc',
+  'Quân',
+  'Sơn',
+  'Thảo',
+  'Uyên',
+  'Việt',
+];
+const CITIES = [
+  'Hà Nội',
+  'Hồ Chí Minh',
+  'Đà Nẵng',
+  'Nha Trang',
+  'Phú Quốc',
+  'Huế',
+  'Đà Lạt',
+  'Cần Thơ',
+  'Hải Phòng',
+  'Quy Nhơn',
+];
 const AIRLINE_PREFIXES = ['VN', 'VJ', 'QH', 'BL'];
 
 function randomItem<T>(arr: T[]): T {
@@ -54,7 +117,8 @@ export class MockDataService {
     @InjectRepository(User) private usersRepository: Repository<User>,
     @InjectRepository(Flight) private flightsRepository: Repository<Flight>,
     @InjectRepository(Seat) private seatsRepository: Repository<Seat>,
-    @InjectRepository(FareClass) private fareClassRepository: Repository<FareClass>,
+    @InjectRepository(FareClass)
+    private fareClassRepository: Repository<FareClass>,
     @InjectRepository(Booking) private bookingsRepository: Repository<Booking>,
     @InjectRepository(Payment) private paymentsRepository: Repository<Payment>,
   ) {}
@@ -65,10 +129,10 @@ export class MockDataService {
     // Tự động dọn dữ liệu mock cũ (nếu có) trước khi seed lại, tránh lỗi trùng khóa
     this.logger.log('Đang dọn dữ liệu mock cũ (nếu có)...');
     await this.usersRepository
-    .createQueryBuilder()
-    .delete()
-    .where('email LIKE :pattern', { pattern: 'user%@demo.com' })
-    .execute();
+      .createQueryBuilder()
+      .delete()
+      .where('email LIKE :pattern', { pattern: 'user%@demo.com' })
+      .execute();
 
     // ===== 1. TẠO 100 USER — tự sinh ID trước =====
     this.logger.log('Đang tạo 100 user...');
@@ -88,13 +152,15 @@ export class MockDataService {
     // ===== 2. TẠO 100 CHUYẾN BAY =====
     this.logger.log('Đang tạo 100 chuyến bay...');
     const flightRows = Array.from({ length: 100 }, () => {
-      let departureCity = randomItem(CITIES);
+      const departureCity = randomItem(CITIES);
       let arrivalCity = randomItem(CITIES);
       while (arrivalCity === departureCity) arrivalCity = randomItem(CITIES);
 
       const departureTime = randomPastOrFutureDate(45, 45);
       const durationHours = randomInt(1, 3);
-      const arrivalTime = new Date(departureTime.getTime() + durationHours * 60 * 60 * 1000);
+      const arrivalTime = new Date(
+        departureTime.getTime() + durationHours * 60 * 60 * 1000,
+      );
       const price = randomInt(80, 350) * 10000;
 
       return {
@@ -113,17 +179,51 @@ export class MockDataService {
     // ===== 3. TẠO 3 HẠNG VÉ CHO MỖI CHUYẾN =====
     this.logger.log('Đang tạo hạng vé...');
     const fareClassRows: any[] = [];
-    const fareClassByFlight: Record<string, { id: string; price: number }[]> = {};
+    const fareClassByFlight: Record<string, { id: string; price: number }[]> =
+      {};
 
     flightRows.forEach((flight) => {
       const basePrice = flight.price;
       const classes = [
-        { id: randomUUID(), flightId: flight.id, name: 'Economy', price: basePrice, carryOnKg: 7, checkedBaggageKg: 0, refundable: false, changeable: false, note: 'Vé điện tử phát hành trong 24 giờ' },
-        { id: randomUUID(), flightId: flight.id, name: 'Economy Saver', price: Math.round(basePrice * 1.15), carryOnKg: 7, checkedBaggageKg: 20, refundable: false, changeable: true, note: 'Đổi lịch có phí, bao gồm 20kg ký gửi' },
-        { id: randomUUID(), flightId: flight.id, name: 'Economy An toàn', price: Math.round(basePrice * 1.35), carryOnKg: 7, checkedBaggageKg: 20, refundable: true, changeable: true, note: 'Hoàn 80% giá vé, bảo hiểm kèm theo' },
+        {
+          id: randomUUID(),
+          flightId: flight.id,
+          name: 'Economy',
+          price: basePrice,
+          carryOnKg: 7,
+          checkedBaggageKg: 0,
+          refundable: false,
+          changeable: false,
+          note: 'Vé điện tử phát hành trong 24 giờ',
+        },
+        {
+          id: randomUUID(),
+          flightId: flight.id,
+          name: 'Economy Saver',
+          price: Math.round(basePrice * 1.15),
+          carryOnKg: 7,
+          checkedBaggageKg: 20,
+          refundable: false,
+          changeable: true,
+          note: 'Đổi lịch có phí, bao gồm 20kg ký gửi',
+        },
+        {
+          id: randomUUID(),
+          flightId: flight.id,
+          name: 'Economy An toàn',
+          price: Math.round(basePrice * 1.35),
+          carryOnKg: 7,
+          checkedBaggageKg: 20,
+          refundable: true,
+          changeable: true,
+          note: 'Hoàn 80% giá vé, bảo hiểm kèm theo',
+        },
       ];
       fareClassRows.push(...classes);
-      fareClassByFlight[flight.id] = classes.map((c) => ({ id: c.id, price: c.price }));
+      fareClassByFlight[flight.id] = classes.map((c) => ({
+        id: c.id,
+        price: c.price,
+      }));
     });
 
     await chunkInsert(this.fareClassRepository, fareClassRows);
@@ -133,7 +233,12 @@ export class MockDataService {
     this.logger.log('Đang tạo 15,000 ghế...');
     const SEATS_PER_FLIGHT = 150;
     const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
-    const seatRows: { id: string; seatNumber: string; status: SeatStatus; flightId: string }[] = [];
+    const seatRows: {
+      id: string;
+      seatNumber: string;
+      status: SeatStatus;
+      flightId: string;
+    }[] = [];
 
     flightRows.forEach((flight) => {
       const rows = SEATS_PER_FLIGHT / 6;
@@ -182,8 +287,12 @@ export class MockDataService {
         fareClassId: fareClass.id,
         status,
         lockExpiresAt: new Date(),
-        passengerName: status !== BookingStatus.EXPIRED ? randomVietnameseName() : null,
-        passengerPhone: status !== BookingStatus.EXPIRED ? `09${randomInt(10000000, 99999999)}` : null,
+        passengerName:
+          status !== BookingStatus.EXPIRED ? randomVietnameseName() : null,
+        passengerPhone:
+          status !== BookingStatus.EXPIRED
+            ? `09${randomInt(10000000, 99999999)}`
+            : null,
         bookingCode,
         _amount: fareClass.price, // field tạm, không insert, dùng để tạo payment bên dưới
         _status: status,
@@ -195,7 +304,9 @@ export class MockDataService {
     });
 
     // Tách field tạm ra trước khi insert thật (Postgres sẽ báo lỗi cột lạ nếu để nguyên)
-    const cleanBookingRows = bookingRows.map(({ _amount, _status, ...rest }) => rest);
+    const cleanBookingRows = bookingRows.map(
+      ({ _amount, _status, ...rest }) => rest,
+    );
     await chunkInsert(this.bookingsRepository, cleanBookingRows);
     this.logger.log(`Đã tạo ${cleanBookingRows.length} booking`);
 
@@ -223,10 +334,14 @@ export class MockDataService {
         return {
           id: randomUUID(),
           bookingId: b.id,
-          transactionCode: 'TXN' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+          transactionCode:
+            'TXN' + Math.random().toString(36).substring(2, 10).toUpperCase(),
           amount: b._amount,
           method: PaymentMethod.QR,
-          status: b._status === BookingStatus.CONFIRMED ? PaymentStatus.SUCCESS : PaymentStatus.REFUNDED,
+          status:
+            b._status === BookingStatus.CONFIRMED
+              ? PaymentStatus.SUCCESS
+              : PaymentStatus.REFUNDED,
           paidAt,
         };
       });

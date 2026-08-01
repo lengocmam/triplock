@@ -81,7 +81,9 @@ export class AuthService {
 
     const isLocked = await this.redis.get(lockKey);
     if (isLocked) {
-      throw new UnauthorizedException('Tài khoản tạm khóa do đăng nhập sai nhiều lần, thử lại sau 15 phút');
+      throw new UnauthorizedException(
+        'Tài khoản tạm khóa do đăng nhập sai nhiều lần, thử lại sau 15 phút',
+      );
     }
 
     const user = await this.usersService.findByEmail(email);
@@ -90,7 +92,10 @@ export class AuthService {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
     }
 
-    const isValid = await this.usersService.validatePassword(password, user.password);
+    const isValid = await this.usersService.validatePassword(
+      password,
+      user.password,
+    );
     if (!isValid) {
       await this.recordFailedAttempt(attemptsKey, lockKey);
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
@@ -102,7 +107,11 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email, role: user.role };
     const token = this.jwtService.sign(payload);
 
-    await this.activityLogService.log(user.id, ActivityAction.LOGIN, 'Đăng nhập vào hệ thống');
+    await this.activityLogService.log(
+      user.id,
+      ActivityAction.LOGIN,
+      'Đăng nhập vào hệ thống',
+    );
 
     return {
       accessToken: token,
@@ -130,7 +139,10 @@ export class AuthService {
 
     // Không tiết lộ email có tồn tại hay không -- chống enumeration, giống nguyên tắc đã áp dụng ở sendOtp
     if (!user) {
-      return { message: 'Nếu email tồn tại trong hệ thống, mã đặt lại mật khẩu đã được gửi' };
+      return {
+        message:
+          'Nếu email tồn tại trong hệ thống, mã đặt lại mật khẩu đã được gửi',
+      };
     }
 
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -139,7 +151,10 @@ export class AuthService {
 
     await this.mailService.sendPasswordResetEmail(email, resetCode);
 
-    return { message: 'Nếu email tồn tại trong hệ thống, mã đặt lại mật khẩu đã được gửi' };
+    return {
+      message:
+        'Nếu email tồn tại trong hệ thống, mã đặt lại mật khẩu đã được gửi',
+    };
   }
 
   async resetPassword(email: string, resetCode: string, newPassword: string) {
@@ -158,7 +173,11 @@ export class AuthService {
     await this.usersService.updatePassword(user.id, newPassword);
     await this.redis.del(key);
 
-    await this.activityLogService.log(user.id, ActivityAction.LOGIN, 'Đặt lại mật khẩu thành công');
+    await this.activityLogService.log(
+      user.id,
+      ActivityAction.LOGIN,
+      'Đặt lại mật khẩu thành công',
+    );
 
     return { message: 'Đặt lại mật khẩu thành công, vui lòng đăng nhập lại' };
   }

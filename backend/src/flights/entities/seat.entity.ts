@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToOne,
+  Index,
+} from 'typeorm';
 import { Flight } from './flight.entity';
 import { Booking } from '../../bookings/entities/booking.entity';
 

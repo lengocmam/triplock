@@ -68,7 +68,10 @@ export class MailService {
     }
   }
 
-  async sendPasswordResetEmail(toEmail: string, resetCode: string): Promise<void> {
+  async sendPasswordResetEmail(
+    toEmail: string,
+    resetCode: string,
+  ): Promise<void> {
     try {
       await this.transporter.sendMail({
         from: `"TripLock" <${this.config.get('GMAIL_USER')}>`,
