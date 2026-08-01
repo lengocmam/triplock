@@ -1,13 +1,9 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
   constructor(private usersService: UsersService) {}
-
-  // CHỈ dùng để setup tài khoản admin đầu tiên — nên xóa route này sau khi đã có admin
-  @Post('promote-admin')
-  promote(@Body('email') email: string) {
-    return this.usersService.promoteToAdmin(email);
-  }
+  // Route promote-admin đã bị xóa vì là lỗ hổng bảo mật nghiêm trọng (privilege escalation)
+  // Nâng quyền admin chỉ thực hiện qua SQL trực tiếp trong Supabase, không qua API công khai
 }

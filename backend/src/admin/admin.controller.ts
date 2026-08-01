@@ -1,11 +1,14 @@
 import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { AdminService } from './admin.service';
 import { MockDataService } from './mock-data.service';
-import { Throttle } from '@nestjs/throttler';
+import { CreateFlightDto } from './dto/create-flight.dto';
+import { UpdateFlightDto } from './dto/update-flight.dto';
+import { UpdateFareClassDto } from './dto/update-fare-class.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -42,12 +45,12 @@ export class AdminController {
   }
 
   @Post('flights')
-  createFlight(@Body() body: any) {
+  createFlight(@Body() body: CreateFlightDto) {
     return this.adminService.createFlight(body);
   }
 
   @Put('flights/:id')
-  updateFlight(@Param('id') id: string, @Body() body: any) {
+  updateFlight(@Param('id') id: string, @Body() body: UpdateFlightDto) {
     return this.adminService.updateFlight(id, body);
   }
 
@@ -62,7 +65,7 @@ export class AdminController {
   }
 
   @Put('fare-classes/:id')
-  updateFareClass(@Param('id') id: string, @Body() body: any) {
+  updateFareClass(@Param('id') id: string, @Body() body: UpdateFareClassDto) {
     return this.adminService.updateFareClass(id, body);
   }
 
@@ -76,10 +79,9 @@ export class AdminController {
     return this.adminService.getAllBookings(Number(page), Number(limit));
   }
 
-  @Throttle({ default: { limit: 2, ttl: 3600000 } }) // tối đa 2 lần/giờ
+  @Throttle({ default: { limit: 2, ttl: 3600000 } })
   @Post('seed-mock-data')
   seedMockData() {
     return this.mockDataService.seedAll();
   }
-  
 }

@@ -8,8 +8,6 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
-const LOBBY_ROOM = 'flights_lobby';
-
 @WebSocketGateway({
   cors: {
     origin: [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:5173'],
@@ -21,19 +19,27 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
   server!: Server;
 
   private logger = new Logger('BookingsGateway');
+  private joinCounts = new Map<string, number>(); // đếm số lần join theo socket.id, chống spam
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
-    // Tự động join lobby ngay khi kết nối, để nhận cập nhật số ghế trống của mọi chuyến bay
-    client.join(LOBBY_ROOM);
+    this.joinCounts.set(client.id, 0);
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
+    this.joinCounts.delete(client.id);
   }
 
   @SubscribeMessage('joinFlight')
   handleJoinFlight(client: Socket, flightId: string) {
+    const count = this.joinCounts.get(client.id) || 0;
+    if (count > 50) {
+      // 1 client bình thường không cần join quá 50 phòng khác nhau trong 1 phiên
+      client.disconnect();
+      return;
+    }
+    this.joinCounts.set(client.id, count + 1);
     client.join(`flight:${flightId}`);
   }
 
@@ -54,9 +60,7 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
     this.server.to(`flight:${flightId}`).emit('seatBooked', { seatId, seatNumber });
   }
 
-  // Bắn ra TOÀN BỘ client đang mở trang danh sách (không chỉ ai đang xem đúng chuyến bay đó)
-  // để cập nhật số ghế trống trên từng thẻ chuyến bay theo thời gian thực
   notifyFlightSeatsChanged(flightId: string, availableSeats: number) {
-    this.server.to(LOBBY_ROOM).emit('flightSeatsChanged', { flightId, availableSeats });
+    this.server.to('flights_lobby').emit('flightSeatsChanged', { flightId, availableSeats });
   }
 }

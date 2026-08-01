@@ -63,6 +63,8 @@ export default function LoginPage() {
           </form>
           <div className="auth-link">
             Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
+            <br />
+            <Link to="/forgot-password" style={{ fontSize: 13 }}>Quên mật khẩu?</Link>
           </div>
         </div>
       </div>

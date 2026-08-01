@@ -67,4 +67,28 @@ export class MailService {
       this.logger.error(`Gửi email xác nhận thất bại: ${error.message}`);
     }
   }
+
+  async sendPasswordResetEmail(toEmail: string, resetCode: string): Promise<void> {
+    try {
+      await this.transporter.sendMail({
+        from: `"TripLock" <${this.config.get('GMAIL_USER')}>`,
+        to: toEmail,
+        subject: 'Đặt lại mật khẩu TripLock',
+        html: `
+          <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; padding: 24px; border: 1px solid #eee; border-radius: 12px;">
+            <h2 style="color: #0071eb;">🔐 Đặt lại mật khẩu</h2>
+            <p>Mã xác nhận đặt lại mật khẩu của bạn là:</p>
+            <div style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #0071eb; text-align: center; padding: 16px; background: #eef4ff; border-radius: 8px; margin: 16px 0;">
+              ${resetCode}
+            </div>
+            <p style="color: #6b7280; font-size: 13px;">Mã có hiệu lực trong 10 phút. Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.</p>
+          </div>
+        `,
+      });
+      this.logger.log(`Đã gửi mã reset password tới ${toEmail}`);
+    } catch (error) {
+      this.logger.error(`Gửi email reset password thất bại: ${error.message}`);
+      throw error;
+    }
+  }
 }

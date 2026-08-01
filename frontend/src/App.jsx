@@ -13,7 +13,7 @@ import AdminFlightsPage from './pages/admin/AdminFlightsPage';
 import AdminBookingsPage from './pages/admin/AdminBookingsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import { useAuth } from './context/AuthContext';
-
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 function App() {
   const { user } = useAuth();
 
@@ -25,7 +25,7 @@ function App() {
       <Route path="/flights" element={user ? <FlightListPage /> : <Navigate to="/login" />} />
       <Route path="/my-bookings" element={user ? <MyBookingsPage /> : <Navigate to="/login" />} />
       <Route path="/activity" element={user ? <ActivityLogPage /> : <Navigate to="/login" />} />
-
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
         <Route index element={<AdminDashboardPage />} />
         <Route path="flights" element={<AdminFlightsPage />} />

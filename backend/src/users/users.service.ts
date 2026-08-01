@@ -54,4 +54,9 @@ export class UsersService {
     user.role = UserRole.ADMIN;
     return this.usersRepository.save(user);
   }
+
+  async updatePassword(userId: string, newPassword: string): Promise<void> {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.usersRepository.update(userId, { password: hashedPassword });
+  }
 }

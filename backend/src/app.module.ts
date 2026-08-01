@@ -15,7 +15,7 @@ import { MailModule } from './mail/mail.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdminModule } from './admin/admin.module';
 import * as Joi from 'joi';
-
+import { HealthModule } from './health/health.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ 
@@ -33,6 +33,7 @@ import * as Joi from 'joi';
           PORT: Joi.number().default(3000),
         }),
     }),
+    HealthModule,
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
