@@ -1566,3 +1566,31 @@ body {
 .chat-input-row button:disabled {
   opacity: 0.5;
 }
+
+.chat-flight-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.chat-flight-card-route {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.chat-flight-card-meta {
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+}
+
+.chat-escalation-banner {
+  background: #fff8e6;
+  border: 1px solid #f5a623;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8a5c00;
+}

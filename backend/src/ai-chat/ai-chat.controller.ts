@@ -16,11 +16,10 @@ export class AiChatController {
 
   @Throttle({ default: { limit: 15, ttl: 60000 } })
   @Post('message')
-  async sendMessage(@Body() dto: ChatMessageDto, @Request() req: any) {
-    const reply = await this.aiChatService.sendMessage(req.user.userId, dto.message);
-    return { reply };
+  async sendMessage(@Body() dto: ChatMessageDto, @Request() req: any): Promise<any> {
+    return this.aiChatService.sendMessage(req.user.userId, dto.message);
   }
-
+  
   @Delete('history')
   clearHistory(@Request() req: any) {
     return this.aiChatService.clearHistory(req.user.userId);
