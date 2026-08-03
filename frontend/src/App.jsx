@@ -14,10 +14,13 @@ import AdminBookingsPage from './pages/admin/AdminBookingsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import { useAuth } from './context/AuthContext';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ChatWidget from './components/ChatWidget';
+
 function App() {
   const { user } = useAuth();
 
   return (
+    <>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -36,6 +39,8 @@ function App() {
       <Route path="/" element={<Navigate to="/flights" />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    <ChatWidget />
+    </>
   );
 }
 

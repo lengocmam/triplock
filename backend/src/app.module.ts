@@ -16,6 +16,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AdminModule } from './admin/admin.module';
 import * as Joi from 'joi';
 import { HealthModule } from './health/health.module';
+import { AiChatModule } from './ai-chat/ai-chat.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -31,6 +32,7 @@ import { HealthModule } from './health/health.module';
         JWT_SECRET: Joi.string().min(32).required(),
         JWT_EXPIRES_IN: Joi.string().default('7d'),
         PORT: Joi.number().default(3000),
+        GEMINI_API_KEY: Joi.string().optional(),
       }),
     }),
     HealthModule,
@@ -66,6 +68,7 @@ import { HealthModule } from './health/health.module';
     AuthModule,
     MailModule,
     AdminModule,
+    AiChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
