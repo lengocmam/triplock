@@ -1,0 +1,62 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 20
+      arrivalRate: 3
+      name: "Tải nhẹ trong giới hạn Supabase free tier"
+    - duration: 30
+      arrivalRate: 6
+      name: "Tải vừa - vẫn trong ngưỡng an toàn"
+  payload:
+    path: "./users.csv"
+    fields:
+      - "email"
+      - "password"
+  processor: "./artillery-functions.js"
+
+scenarios:
+  - name: "Luồng xem chuyến bay (đọc, không cần login)"
+    weight: 60
+    flow:
+      - get:
+          url: "/flights"
+      - think: 1
+      - get:
+          url: "/flights"
+
+  - name: "Luồng đăng nhập + xem vé của tôi"
+    weight: 25
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.accessToken"
+              as: "token"
+      - get:
+          url: "/bookings/my-bookings"
+          headers:
+            Authorization: "Bearer {{ token }}"
+
+  - name: "Luồng đăng nhập + thử giữ ghế (test tải thật lên Redis lock)"
+    weight: 15
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.accessToken"
+              as: "token"
+      - function: "pickRandomSeat"
+      - post:
+          url: "/bookings/lock-seat/{{ seatId }}"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            fareClassId: "{{ fareClassId }}"
+          expect:
+            - statusCode: [201, 400] # 201 = thành công, 400 = ghế đã bị người khác giữ (CHẤP NHẬN ĐƯỢC, không phải lỗi)

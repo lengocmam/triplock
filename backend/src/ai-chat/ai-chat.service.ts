@@ -40,8 +40,8 @@ const SESSION_IDLE_MINUTES = 30; // mục 8: im lặng quá 30 phút -> coi như
 const DAILY_TOKEN_BUDGET = 50000; // mục 9: giới hạn token/user/ngày, không chỉ giới hạn số request
 
 // Model rẻ cho câu hỏi đơn giản, model mạnh hơn khi cần nhiều vòng suy luận/tool -- mục 1
-const MODEL_LITE = 'gemini-3.5-flash-lite';
-const MODEL_STANDARD = 'gemini-3.5-flash';
+const MODEL_LITE = 'gemini-flash-latest';
+const MODEL_STANDARD = 'gemini-flash-latest';
 
 @Injectable()
 export class AiChatService {
@@ -183,7 +183,8 @@ export class AiChatService {
       }
       return null;
     } catch (error) {
-      this.logger.warn(`Semantic cache lookup lỗi (bỏ qua, tiếp tục gọi AI thật): ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Semantic cache lookup lỗi (bỏ qua, tiếp tục gọi AI thật): ${message}`);
       return null; // lỗi embedding không được làm gián đoạn luồng chính
     }
   }
@@ -194,7 +195,8 @@ export class AiChatService {
       const key = `aichat:semantic:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
       await this.redis.set(key, JSON.stringify({ embedding, reply }), 'EX', SEMANTIC_CACHE_TTL_SECONDS);
     } catch (error) {
-      this.logger.warn(`Không thể lưu semantic cache: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Không thể lưu semantic cache: ${message}`);
     }
   }
 
@@ -321,8 +323,10 @@ export class AiChatService {
     } catch (error: any) {
       const status = error.response?.status;
       const isRetryable = status === 429 || status === 500 || status === 503;
-      if (isRetryable && attempt < 3) {
-        const delayMs = attempt * 800;
+      const MAX_ATTEMPTS = 4; // tăng từ 3 lên 4
+
+      if (isRetryable && attempt < MAX_ATTEMPTS) {
+        const delayMs = Math.min(1000 * 2 ** (attempt - 1), 8000); // exponential: 1s, 2s, 4s (tối đa 8s)
         this.logger.warn(`Gemini lỗi ${status}, thử lại lần ${attempt + 1} sau ${delayMs}ms`);
         await new Promise((r) => setTimeout(r, delayMs));
         return this.callGeminiWithRetry(model, body, attempt + 1);
@@ -330,7 +334,6 @@ export class AiChatService {
       throw error;
     }
   }
-
   private buildSystemInstruction(
     profile: { bookingCount: number; favoriteCities: string[]; favoriteFareClass: string | null },
     historySummary: string,
@@ -365,9 +368,16 @@ export class AiChatService {
       // vì hàng rào thật sự nằm ở chỗ dữ liệu nhạy cảm (giá, quyền) không bao giờ lấy từ input model
     }
 
-    await this.saveMessage(userId, ChatRole.USER, userMessage); // mục 2 cũ: lưu trước khi gọi API
+    // QUAN TRỌNG: lấy lịch sử CŨ trước khi lưu tin nhắn hiện tại, để tách bạch rõ ràng
+    // "ngữ cảnh trước đó" và "tin nhắn đang xử lý" -- tránh phụ thuộc logic idle-check
+    // (có thể bị lệch múi giờ) làm mất luôn tin nhắn hiện tại khỏi contents gửi lên Gemini
+    const [profile, priorHistory] = await Promise.all([
+      this.getUserBookingProfile(userId),
+      this.getHistory(userId),
+    ]);
 
-    // Mục 2: kiểm tra semantic cache trước, chỉ cho câu hỏi không mang tính cá nhân
+    await this.saveMessage(userId, ChatRole.USER, userMessage);
+
     if (this.isCacheableQuestion(userMessage)) {
       const cachedReply = await this.getSemanticCache(userMessage);
       if (cachedReply) {
@@ -376,15 +386,17 @@ export class AiChatService {
       }
     }
 
-    const [profile, allHistory] = await Promise.all([
-      this.getUserBookingProfile(userId),
-      this.getHistory(userId),
-    ]);
-    const { recent, summaryText } = this.splitHistory(allHistory);
+    const { recent, summaryText } = this.splitHistory(priorHistory);
     const systemInstruction = this.buildSystemInstruction(profile, summaryText);
-    const model = this.routeModel(userMessage); // mục 1
+    const model = this.routeModel(userMessage);
 
-    let contents: any[] = recent.map((h) => ({ role: h.role, parts: [{ text: h.text }] }));
+    // Luôn luôn thêm tin nhắn hiện tại vào cuối -- không phụ thuộc bất kỳ logic lọc/idle-check nào
+    let contents: any[] = [
+      ...recent.map((h) => ({ role: h.role, parts: [{ text: h.text }] })),
+      { role: 'user', parts: [{ text: userMessage }] },
+    ];
+
+    
     const structured: StructuredResult = { suggestedFlights: [], needsHumanSupport: false };
     let totalPromptTokens = 0, totalCompletionTokens = 0;
 

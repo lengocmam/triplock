@@ -58,3 +58,18 @@ jobs:
         run: npm run build
         env:
           VITE_API_URL: https://placeholder.example.com
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          DATABASE_HOST: ${{ secrets.TEST_DATABASE_HOST }}
+          DATABASE_PORT: 5432
+          DATABASE_USER: ${{ secrets.TEST_DATABASE_USER }}
+          DATABASE_PASSWORD: ${{ secrets.TEST_DATABASE_PASSWORD }}
+          DATABASE_NAME: ${{ secrets.TEST_DATABASE_NAME }}
+          REDIS_HOST: ${{ secrets.TEST_REDIS_HOST }}
+          REDIS_PORT: ${{ secrets.TEST_REDIS_PORT }}
+          JWT_SECRET: test-secret-for-ci-only-32-characters-long

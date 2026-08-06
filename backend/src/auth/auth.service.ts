@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import Redis from 'ioredis';
 import { UsersService } from '../users/users.service';
@@ -20,15 +21,19 @@ export class AuthService {
     @Inject(REDIS_CLIENT) private redis: Redis,
     private activityLogService: ActivityLogService,
     private mailService: MailService,
+    private config: ConfigService,
   ) {}
 
   async register(email: string, password: string, fullName: string) {
     const user = await this.usersService.create(email, password, fullName);
-    await this.activityLogService.log(
-      user.id,
-      ActivityAction.REGISTER,
-      `Tài khoản ${email} vừa được tạo`,
-    );
+
+    // CHỈ auto-verify trong môi trường test/load-testing, KHÔNG BAO GIỜ bật ở production
+    // -- bảo vệ bằng biến môi trường riêng, mặc định false, phải set tường minh mới bật được
+    if (this.config.get('ENABLE_TEST_AUTO_VERIFY') === 'true') {
+      await this.usersService.markAsVerified(user.id);
+    }
+
+    await this.activityLogService.log(user.id, ActivityAction.REGISTER, `Tài khoản ${email} vừa được tạo`);
     return { id: user.id, email: user.email, fullName: user.fullName };
   }
 

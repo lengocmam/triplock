@@ -58,6 +58,10 @@ import { AiChatModule } from './ai-chat/ai-chat.module';
         ssl: {
           rejectUnauthorized: false,
         },
+        extra:{
+          max:10,
+          connectionTimeoutMillis: 5000,
+        }
       }),
     }),
     RedisModule,

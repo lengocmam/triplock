@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const EMBED_URL = 'https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent';
+const EMBED_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent';
 
 export async function getEmbedding(apiKey: string, text: string): Promise<number[]> {
   const response = await axios.post(
