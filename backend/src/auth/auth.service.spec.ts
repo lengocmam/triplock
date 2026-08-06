@@ -3,6 +3,9 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { REDIS_CLIENT } from '../redis/redis.module';
+import { ActivityLogService } from '../activity-log/activity-log.service';
+import { MailService } from '../mail/mail.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -33,6 +36,27 @@ describe('AuthService', () => {
             set: jest.fn(),
             get: jest.fn(),
             del: jest.fn(),
+          },
+        },
+        {
+          provide: ActivityLogService,
+          useValue: {
+            log: jest.fn(),
+            logActivity: jest.fn(),
+          },
+        },
+        {
+          provide: MailService,
+          useValue: {
+            sendMail: jest.fn(),
+            sendOtp: jest.fn(),
+            sendResetPasswordEmail: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn(),
           },
         },
       ],

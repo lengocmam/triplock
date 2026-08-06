@@ -8,6 +8,9 @@ import { UsersService } from '../users/users.service';
 import { BookingsGateway } from './bookings.gateway';
 import { REDIS_CLIENT } from '../redis/redis.module';
 import { SeatStatus } from '../flights/entities/seat.entity';
+import { Payment } from './entities/payment.entity';
+import { ActivityLogService } from '../activity-log/activity-log.service';
+import { MailService } from '../mail/mail.service';
 
 describe('BookingsService', () => {
   let service: BookingsService;
@@ -16,14 +19,21 @@ describe('BookingsService', () => {
   let mockFlightsService: any;
   let mockUsersService: any;
   let mockGateway: any;
+  let mockPaymentRepo: any;
+  let mockActivityLogService: any;
+  let mockMailService: any;
 
   const mockUserId = 'user-1';
   const mockSeatId = 'seat-1';
+  const mockFareClassId = 'fare-1';
   const mockSeat = {
     id: mockSeatId,
     seatNumber: '1A',
     status: SeatStatus.AVAILABLE,
-    flight: { id: 'flight-1' },
+    flight: {
+      id: 'flight-1',
+      flightCode: 'VN123',
+    },
   };
 
   beforeEach(async () => {
@@ -42,7 +52,16 @@ describe('BookingsService', () => {
 
     mockFlightsService = {
       getSeatById: jest.fn().mockResolvedValue(mockSeat),
+
+      getFareClassById: jest.fn().mockResolvedValue({
+        id: mockFareClassId,
+        className: 'Economy',
+        price: 100,
+      }),
+
       updateSeatStatus: jest.fn().mockResolvedValue(undefined),
+
+      countAvailableSeats: jest.fn().mockResolvedValue(25),
     };
 
     mockUsersService = {
@@ -55,16 +74,35 @@ describe('BookingsService', () => {
       notifySeatLocked: jest.fn(),
       notifySeatBooked: jest.fn(),
       notifySeatReleased: jest.fn(),
+      notifyFlightSeatsChanged: jest.fn(),
+    };
+
+    mockPaymentRepo = {
+      create: jest.fn(),
+      save: jest.fn(),
+      findOne: jest.fn(),
+    };
+
+    mockActivityLogService = {
+      log: jest.fn().mockResolvedValue(undefined),
+    };
+
+    mockMailService = {
+      sendMail: jest.fn(),
+      sendBookingConfirmation: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BookingsService,
+        { provide: getRepositoryToken(Payment), useValue: mockPaymentRepo },
         { provide: getRepositoryToken(Booking), useValue: mockBookingRepo },
         { provide: FlightsService, useValue: mockFlightsService },
         { provide: UsersService, useValue: mockUsersService },
         { provide: REDIS_CLIENT, useValue: mockRedis },
         { provide: BookingsGateway, useValue: mockGateway },
+        { provide: ActivityLogService, useValue: mockActivityLogService },
+        { provide: MailService, useValue: mockMailService },
       ],
     }).compile();
 
@@ -75,7 +113,7 @@ describe('BookingsService', () => {
     it('nên giữ ghế thành công khi Redis SET NX trả về OK', async () => {
       mockRedis.set.mockResolvedValue('OK');
 
-      const result = await service.lockSeat(mockSeatId, mockUserId);
+      const result = await service.lockSeat(mockSeatId, mockFareClassId, mockUserId);
 
       expect(mockRedis.set).toHaveBeenCalledWith(
         `seat:lock:${mockSeatId}`,
@@ -96,7 +134,7 @@ describe('BookingsService', () => {
       // Đây chính là tình huống race condition: request thứ 2 đến sau, Redis trả null
       mockRedis.set.mockResolvedValue(null);
 
-      await expect(service.lockSeat(mockSeatId, mockUserId)).rejects.toThrow(
+      await expect(service.lockSeat(mockSeatId, mockFareClassId, mockUserId)).rejects.toThrow(
         BadRequestException,
       );
 
@@ -159,8 +197,8 @@ describe('BookingsService', () => {
 
       // Bắn 2 request "gần như đồng thời" bằng Promise.allSettled
       const results = await Promise.allSettled([
-        service.lockSeat(mockSeatId, 'user-A'),
-        service.lockSeat(mockSeatId, 'user-B'),
+        service.lockSeat(mockSeatId,mockFareClassId, 'user-A'),
+        service.lockSeat(mockSeatId,mockFareClassId, 'user-B'),
       ]);
 
       const fulfilled = results.filter((r) => r.status === 'fulfilled');
