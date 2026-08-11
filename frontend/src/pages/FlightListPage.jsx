@@ -7,6 +7,7 @@ import ConnectionStatus from '../components/ConnectionStatus';
 import BookingDrawer from '../components/BookingDrawer';
 import { useDebounce } from '../hooks/useDebounce';
 import { useSocket } from '../hooks/useSocket';
+import { useAuth } from '../context/AuthContext';
 
 function formatTime(dateStr) {
   return new Date(dateStr).toLocaleString('vi-VN', {
@@ -37,6 +38,8 @@ export default function FlightListPage() {
   const [date, setDate] = useState('');
   const [selectedFlightId, setSelectedFlightId] = useState(null);
   const [sortBy, setSortBy] = useState('recommended'); // recommended | price-asc | price-desc | time-asc
+  const { user } = useAuth();
+
 
   // Set các flightId vừa nhận cập nhật, để chạy hiệu ứng pulse rồi tự tắt
   const [pulsingIds, setPulsingIds] = useState(new Set());
@@ -46,6 +49,14 @@ export default function FlightListPage() {
 
   const debouncedDeparture = useDebounce(departureCity);
   const debouncedArrival = useDebounce(arrivalCity);
+
+  const handleSelectFlight = (flightId) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setSelectedFlightId(flightId);
+  };
 
   const fetchFlights = async (filters = {}) => {
     setLoading(true);
@@ -263,7 +274,7 @@ export default function FlightListPage() {
                 <button
                   className="btn btn-primary"
                   disabled={flight.availableSeats === 0}
-                  onClick={() => setSelectedFlightId(flight.id)}
+                  onClick={() => handleSelectFlight(flight.id)}
                 >
                   {flight.availableSeats === 0 ? 'Hết ghế' : 'Chọn ghế'}
                 </button>

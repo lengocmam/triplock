@@ -31,6 +31,14 @@ export default function ChatWidget() {
 
   useEffect(() => {
     if (open && !historyLoaded) {
+      if (!user) {
+        // Khách vãng lai: không có lịch sử lưu DB, chỉ hiện lời chào
+        setMessages([
+          { role: 'model', text: 'Xin chào! Mình là trợ lý AI của TripLock ✈️ Bạn có thể hỏi mình về chuyến bay ngay, không cần đăng nhập!' },
+        ]);
+        setHistoryLoaded(true);
+        return;
+      }
       apiClient.get('/ai-chat/history').then((res) => {
         if (res.data.length === 0) {
           setMessages([
@@ -42,9 +50,8 @@ export default function ChatWidget() {
         setHistoryLoaded(true);
       });
     }
-  }, [open, historyLoaded]);
+  }, [open, historyLoaded, user]);
 
-  if (!user) return null;
 
   const handleSend = async (e) => {
     e.preventDefault();
