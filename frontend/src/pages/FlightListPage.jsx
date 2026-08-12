@@ -8,6 +8,7 @@ import BookingDrawer from '../components/BookingDrawer';
 import { useDebounce } from '../hooks/useDebounce';
 import { useSocket } from '../hooks/useSocket';
 import { useAuth } from '../context/AuthContext';
+import SkyHero from '../components/SkyHero';
 
 function formatTime(dateStr) {
   return new Date(dateStr).toLocaleString('vi-VN', {
@@ -22,6 +23,16 @@ const PROMOS = [
   { icon: '💳', title: 'Giảm 200K', desc: 'Thanh toán qua thẻ tín dụng' },
   { icon: '🎁', title: 'Ưu đãi mới', desc: 'Tài khoản lần đầu đặt vé' },
   { icon: '⚡', title: 'Giữ chỗ nhanh', desc: 'Ghế khóa real-time 5 phút' },
+];
+
+const DESTINATION_GALLERY = [
+  { city: 'Đà Nẵng', img: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400&q=80' },
+  { city: 'Phú Quốc', img: 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&q=80' },
+  { city: 'Nha Trang', img: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=400&q=80' },
+  { city: 'Đà Lạt', img: 'https://images.unsplash.com/photo-1585504198199-20277593b94f?w=400&q=80' },
+  { city: 'Hồ Chí Minh', img: 'https://images.unsplash.com/photo-1583417267826-aebc4d1542e1?w=400&q=80' },
+  { city: 'Hà Nội', img: 'https://images.unsplash.com/photo-1509030450996-dd1a26dda07a?w=400&q=80' },
+  { city: 'Huế', img: 'https://images.unsplash.com/photo-1583067608737-ba1c3f4f5c8a?w=400&q=80' },
 ];
 
 function seatBadgeClass(count) {
@@ -138,10 +149,7 @@ export default function FlightListPage() {
     <div className="page-container">
       <Navbar />
 
-      <div className="hero-banner">
-        <div className="hero-title">Tìm & đặt vé máy bay nhanh chóng</div>
-        <div className="hero-subtitle">Đặt chỗ real-time — ghế được giữ ngay khi bạn chọn</div>
-      </div>
+      <SkyHero />
 
       <div className="search-bar-card">
         <form className="search-bar-inner" onSubmit={handleSearch}>
@@ -190,6 +198,27 @@ export default function FlightListPage() {
             <div className="promo-text">
               <strong>{p.title}</strong>
               {p.desc}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="section-title" style={{ marginTop: 36 }}>Khám phá điểm đến</div>
+      <div className="section-subtitle">Những hành trình được yêu thích nhất</div>
+      <div className="gallery-scroll">
+        {DESTINATION_GALLERY.map((d) => (
+          <div
+            key={d.city}
+            className="gallery-card"
+            onClick={() => {
+              setArrivalCity(d.city);
+              fetchFlights({ departureCity, arrivalCity: d.city, date });
+            }}
+          >
+            <img src={d.img} alt={d.city} loading="lazy" />
+            <div className="gallery-card-overlay">
+              <div className="gallery-card-city">{d.city}</div>
+              <div className="gallery-card-price">Xem chuyến bay →</div>
             </div>
           </div>
         ))}
@@ -246,40 +275,33 @@ export default function FlightListPage() {
 
         {!loading &&
           sortedFlights.map((flight) => (
-            <div key={flight.id} className="flight-card">
-              <div className="flight-route">
+            <div key={flight.id} className="flight-card-v2">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
                 <div className="flight-code-badge">{flight.flightCode}</div>
-                <div>
-                  <div className="flight-cities">
-                    {flight.departureCity} → {flight.arrivalCity}
-                  </div>
-                  <div className="flight-time">
-                    Khởi hành: {formatTime(flight.departureTime)} · Đến: {formatTime(flight.arrivalTime)}
-                  </div>
-                  <div
-                    className={`seats-live-badge ${seatBadgeClass(flight.availableSeats)} ${
-                      pulsingIds.has(flight.id) ? 'seats-pulse' : ''
-                    }`}
-                    style={{ marginTop: 6 }}
-                  >
-                    🟢 Còn {flight.availableSeats} ghế trống
-                  </div>
+                <div className="route-visual">
+                  <span className="route-city">{flight.departureCity}</span>
+                  <span className="route-line"><span className="route-plane">✈</span></span>
+                  <span className="route-city">{flight.arrivalCity}</span>
+                </div>
+                <div className="flight-time">
+                  Khởi hành: {formatTime(flight.departureTime)} · Đến: {formatTime(flight.arrivalTime)}
+                </div>
+                <div className={`seats-live-badge ${seatBadgeClass(flight.availableSeats)} ${pulsingIds.has(flight.id) ? 'seats-pulse' : ''}`} style={{ marginTop: 6 }}>
+                  🟢 Còn {flight.availableSeats} ghế trống
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
                 <div className="flight-price">
                   <div className="flight-price-label">Giá vé</div>
                   {Number(flight.price).toLocaleString('vi-VN')} đ
                 </div>
-                <button
-                  className="btn btn-primary"
-                  disabled={flight.availableSeats === 0}
-                  onClick={() => handleSelectFlight(flight.id)}
-                >
+                <button className="btn btn-primary" disabled={flight.availableSeats === 0} onClick={() => handleSelectFlight(flight.id)}>
                   {flight.availableSeats === 0 ? 'Hết ghế' : 'Chọn ghế'}
                 </button>
               </div>
             </div>
+          </div>
           ))}
       </div>
 

@@ -25,6 +25,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-otp" element={<VerifyOtpPage />} />
+      <Route path="/" element={<Navigate to="/flights" />} />
       <Route path="/flights" element={<FlightListPage />} />
       <Route path="/my-bookings" element={user ? <MyBookingsPage /> : <Navigate to="/login" />} />
       <Route path="/activity" element={user ? <ActivityLogPage /> : <Navigate to="/login" />} />

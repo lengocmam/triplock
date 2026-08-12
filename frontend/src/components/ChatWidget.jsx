@@ -96,7 +96,9 @@ export default function ChatWidget() {
           <div className="chat-header">
             <span>🤖 Trợ lý AI TripLock</span>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={handleClearHistory} title="Xóa lịch sử" style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: 13 }}>🗑️</button>
+              {user && (
+                <button onClick={handleClearHistory} title="Xóa lịch sử" style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: 13 }}>🗑️</button>
+              )}
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: 16 }}>✕</button>
             </div>
           </div>
