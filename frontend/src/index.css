@@ -2112,3 +2112,241 @@ h1, h2, h3 {
   background: linear-gradient(135deg, #d4f7e0, #baf0d0);
   color: #0d7a3f;
 }
+
+/* ===== BOARDING PASS TICKET ===== */
+.boarding-pass {
+  display: flex;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 28px var(--shadow-color);
+  overflow: visible;
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.bp-main {
+  flex: 1;
+  padding: 22px 24px;
+  position: relative;
+}
+
+.bp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.bp-airline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--accent);
+}
+
+.bp-status-tag {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-family: var(--font-display);
+}
+.bp-status-confirmed { background: #d4f7e0; color: #0d7a3f; }
+.bp-status-pending { background: #fff3d6; color: #a5690a; }
+.bp-status-expired { background: #eceff3; color: #6b7280; }
+.bp-status-cancelled { background: #fde0e0; color: #b32424; }
+
+.bp-route-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.bp-city-block {
+  flex: 0 0 auto;
+}
+.bp-city-code {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.bp-city-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.bp-route-mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 4px;
+}
+.bp-route-line {
+  width: 100%;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, var(--border-color) 0, var(--border-color) 5px, transparent 5px, transparent 10px);
+  position: relative;
+}
+.bp-route-plane {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-card);
+  padding: 0 6px;
+  font-size: 15px;
+}
+.bp-route-duration {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: ui-monospace, monospace;
+}
+
+.bp-details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border-color);
+}
+.bp-detail-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.bp-detail-value {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bp-passengers {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border-color);
+}
+.bp-passenger-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+}
+.bp-passenger-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.bp-passenger-seat {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+
+/* Cuống vé bên phải, kiểu boarding pass thật */
+.bp-stub {
+  flex: 0 0 130px;
+  background: var(--bg-hover);
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  border-left: 1px dashed var(--border-color);
+}
+
+/* Vết đục lỗ tròn trên/dưới giữa 2 phần vé */
+.bp-stub::before, .bp-stub::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: var(--bg-primary);
+  border-radius: 50%;
+  left: -11px;
+}
+.bp-stub::before { top: -11px; }
+.bp-stub::after { bottom: -11px; }
+
+.bp-stub-code {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--accent);
+  text-align: center;
+}
+.bp-stub-gate {
+  text-align: center;
+}
+.bp-stub-gate-label {
+  font-size: 9px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.bp-stub-gate-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--text-primary);
+}
+
+/* Mã vạch giả lập bằng CSS gradient sọc */
+.bp-barcode {
+  width: 100%;
+  height: 40px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--text-primary) 0px, var(--text-primary) 2px,
+    transparent 2px, transparent 4px,
+    var(--text-primary) 4px, var(--text-primary) 5px,
+    transparent 5px, transparent 8px,
+    var(--text-primary) 8px, var(--text-primary) 11px,
+    transparent 11px, transparent 13px
+  );
+  opacity: 0.85;
+}
+
+.bp-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 640px) {
+  .boarding-pass { flex-direction: column; }
+  .bp-stub {
+    flex: none;
+    flex-direction: row;
+    border-left: none;
+    border-top: 1px dashed var(--border-color);
+    padding: 14px 20px;
+  }
+  .bp-stub::before, .bp-stub::after {
+    top: -11px; left: 50%;
+    transform: translateX(-50%);
+  }
+  .bp-stub::after { top: auto; bottom: -11px; }
+  .bp-details-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media print {
+  .bp-actions { display: none; }
+}

@@ -11,15 +11,19 @@ const STATUS_LABEL = {
   cancelled: 'Đã hủy',
 };
 
-function formatDateTime(dateStr) {
-  return new Date(dateStr).toLocaleString('vi-VN', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+function airportCode(city) {
+  return city.normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 3).toUpperCase();
+}
+
+function formatDateShort(dateStr) {
+  return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function formatTimeShort(dateStr) {
+  return new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+}
+function formatDuration(dep, arr) {
+  const mins = Math.round((new Date(arr) - new Date(dep)) / 60000);
+  return `${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}m` : ''}`;
 }
 
 export default function MyBookingsPage() {
@@ -32,20 +36,13 @@ export default function MyBookingsPage() {
 
   const loadBookings = () => {
     setLoading(true);
-    apiClient
-      .get('/bookings/my-bookings')
-      .then((res) => setBookings(res.data))
-      .finally(() => setLoading(false));
+    apiClient.get('/bookings/my-bookings').then((res) => setBookings(res.data)).finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
+  useEffect(() => { loadBookings(); }, []);
 
   const handleCancel = async (bookingId) => {
-    if (!window.confirm('Bạn chắc chắn muốn hủy vé này? Hành động này không thể hoàn tác.')) {
-      return;
-    }
+    if (!window.confirm('Bạn chắc chắn muốn hủy vé này?')) return;
     setCancellingId(bookingId);
     try {
       await apiClient.post(`/bookings/cancel-confirmed/${bookingId}`);
@@ -67,14 +64,13 @@ export default function MyBookingsPage() {
     const sameGroup = b.bookingCode ? bookings.filter((x) => x.bookingCode === b.bookingCode) : [b];
     groups.push(sameGroup);
   });
-  groups.sort((a, b) => new Date(b[0].createdAt).getTime() - new Date(a[0].createdAt).getTime());
+  groups.sort((a, b) => new Date(b[0].createdAt) - new Date(a[0].createdAt));
 
   return (
     <div className="page-container">
       <Navbar />
-
-      <div style={{ maxWidth: 700, margin: '30px auto', padding: '0 24px' }}>
-        <h2 style={{ marginBottom: 20 }}>Vé của tôi</h2>
+      <div style={{ maxWidth: 760, margin: '30px auto', padding: '0 24px' }}>
+        <h2 style={{ marginBottom: 22, fontFamily: 'var(--font-display)' }}>🎫 Vé của tôi</h2>
 
         {loading && <div style={{ textAlign: 'center', padding: 40 }}>Đang tải...</div>}
 
@@ -95,57 +91,85 @@ export default function MyBookingsPage() {
           const isPrintTarget = printingCode === (first.bookingCode || first.id);
 
           return (
-            <div
-              className={`ticket-card ${isPrintTarget ? 'ticket-printing' : ''}`}
-              key={first.bookingCode || first.id}
-            >
-              <div className="ticket-header">
-                <div className="ticket-code">
-                  Mã đặt chỗ
-                  <strong>{first.bookingCode || 'Chưa hoàn tất'}</strong>
+            <div className={`ticket-card ${isPrintTarget ? 'ticket-printing' : ''}`} key={first.bookingCode || first.id}>
+              <div className="boarding-pass">
+                <div className="bp-main">
+                  <div className="bp-header">
+                    <div className="bp-airline">✈️ TripLock Air · {flight.flightCode}</div>
+                    <span className={`bp-status-tag bp-status-${status}`}>{STATUS_LABEL[status] || status}</span>
+                  </div>
+
+                  <div className="bp-route-row">
+                    <div className="bp-city-block">
+                      <div className="bp-city-code">{airportCode(flight.departureCity)}</div>
+                      <div className="bp-city-name">{flight.departureCity}</div>
+                    </div>
+                    <div className="bp-route-mid">
+                      <div className="bp-route-duration">{formatDuration(flight.departureTime, flight.arrivalTime)}</div>
+                      <div className="bp-route-line"><span className="bp-route-plane">✈️</span></div>
+                    </div>
+                    <div className="bp-city-block" style={{ textAlign: 'right' }}>
+                      <div className="bp-city-code">{airportCode(flight.arrivalCity)}</div>
+                      <div className="bp-city-name">{flight.arrivalCity}</div>
+                    </div>
+                  </div>
+
+                  <div className="bp-details-grid">
+                    <div>
+                      <div className="bp-detail-label">Ngày bay</div>
+                      <div className="bp-detail-value">{formatDateShort(flight.departureTime)}</div>
+                    </div>
+                    <div>
+                      <div className="bp-detail-label">Giờ bay</div>
+                      <div className="bp-detail-value">{formatTimeShort(flight.departureTime)}</div>
+                    </div>
+                    <div>
+                      <div className="bp-detail-label">Hạng vé</div>
+                      <div className="bp-detail-value">{first.fareClass?.name}</div>
+                    </div>
+                    <div>
+                      <div className="bp-detail-label">Số vé</div>
+                      <div className="bp-detail-value">{group.length}</div>
+                    </div>
+                  </div>
+
+                  <div className="bp-passengers">
+                    {group.map((b) => (
+                      <div className="bp-passenger-row" key={b.id}>
+                        <span className="bp-passenger-name">{b.passengerName || '—'}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span className="bp-passenger-seat">Ghế {b.seat.seatNumber}</span>
+                          {status === 'confirmed' && (
+                            <button
+                              className="btn btn-danger print-hide"
+                              style={{ padding: '3px 10px', fontSize: 11 }}
+                              disabled={cancellingId === b.id}
+                              onClick={() => handleCancel(b.id)}
+                            >
+                              {cancellingId === b.id ? '...' : 'Hủy'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className={`ticket-status ticket-status-${status}`}>
-                  {STATUS_LABEL[status] || status}
+
+                <div className="bp-stub">
+                  <div className="bp-stub-code">{first.bookingCode || '— — —'}</div>
+                  <div className="bp-stub-gate">
+                    <div className="bp-stub-gate-label">Ghế</div>
+                    <div className="bp-stub-gate-value">{group[0].seat.seatNumber}</div>
+                  </div>
+                  <div className="bp-barcode" />
                 </div>
               </div>
 
-              <div className="ticket-body">
-                <div className="ticket-route-row">
-                  <span className="flight-code-badge">{flight.flightCode}</span>
-                  <strong style={{ fontSize: 16 }}>
-                    {flight.departureCity} → {flight.arrivalCity}
-                  </strong>
-                </div>
-
-                <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 14 }}>
-                  Khởi hành: {formatDateTime(flight.departureTime)}
-                </p>
-
-                <div>
-                  {group.map((b) => (
-                    <div className="ticket-passenger-row" key={b.id}>
-                      <span>
-                        {b.passengerName || '(Chưa có tên khách)'} · Ghế <strong>{b.seat.seatNumber}</strong>
-                        <span style={{ color: '#9aa5b1' }}> · {b.fareClass?.name}</span>
-                      </span>
-                      {status === 'confirmed' && (
-                        <button
-                          className="btn btn-danger"
-                          style={{ padding: '4px 12px', fontSize: 12 }}
-                          disabled={cancellingId === b.id}
-                          onClick={() => handleCancel(b.id)}
-                        >
-                          {cancellingId === b.id ? 'Đang hủy...' : 'Hủy vé'}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {status === 'confirmed' && (
+              {status === 'confirmed' && (
+                <div className="bp-actions">
                   <button
                     className="btn btn-secondary print-hide"
-                    style={{ marginTop: 14, width: '100%' }}
+                    style={{ flex: 1 }}
                     onClick={() => {
                       setPrintingCode(first.bookingCode || first.id);
                       setTimeout(() => {
@@ -156,8 +180,8 @@ export default function MyBookingsPage() {
                   >
                     🖨️ In vé điện tử
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           );
         })}
