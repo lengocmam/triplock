@@ -10,11 +10,16 @@ import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 import { MockDataService } from './mock-data.service';
 import { FlightsModule } from '../flights/flights.module';
+import { KnowledgeBaseService } from '../ai-chat/knowledge-base.service';
+import { IngestDocsDto } from '../ai-chat/dto/ingest-docs.dto';
+import { AiChatModule } from '../ai-chat/ai-chat.module';
+
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Booking, Payment, Flight, Seat, FareClass, User]),
     FlightsModule,
+    AiChatModule,
   ],
   providers: [AdminService, MockDataService],
   controllers: [AdminController],

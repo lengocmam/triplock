@@ -14,6 +14,7 @@ import { AI_CHAT_TOOLS } from './ai-chat.tools';
 import { normalizeCityName, extractMentionedCities } from './utils/city-alias.util';
 import { getEmbedding, cosineSimilarity } from './utils/embedding.util';
 import { detectPromptInjection, sanitizeToolResult } from './utils/prompt-guard.util';
+import { KnowledgeBaseService } from './knowledge-base.service';
 
 interface GeminiPart {
   text?: string;
@@ -51,6 +52,7 @@ export class AiChatService {
 
   constructor(
     private config: ConfigService,
+    private knowledgeBaseService: KnowledgeBaseService,
     @InjectRepository(Flight) private flightsRepository: Repository<Flight>,
     @InjectRepository(FareClass) private fareClassRepository: Repository<FareClass>,
     @InjectRepository(Booking) private bookingsRepository: Repository<Booking>,
@@ -288,6 +290,16 @@ export class AiChatService {
     return { escalated: true, message: 'Đã ghi nhận, nhân viên hỗ trợ sẽ liên hệ bạn sớm nhất' };
   }
 
+  private async toolSearchKnowledgeBase(args: { query: string }): Promise<unknown> {
+    const results = await this.knowledgeBaseService.search(args.query, 3);
+    // Chỉ trả về đoạn có độ tương đồng đủ cao -- tránh nhồi context không liên quan vào prompt (tốn token vô ích)
+    const relevant = results.filter((r) => r.similarity > 0.65);
+    if (relevant.length === 0) {
+      return { found: false, message: 'Không tìm thấy thông tin liên quan trong cơ sở tri thức' };
+    }
+    return { found: true, results: relevant.map((r) => ({ topic: r.topic, content: r.content })) };
+  }
+
   private async executeTool(userId: string, name: string, args: any, structured: StructuredResult): Promise<unknown> {
     let result: unknown;
     switch (name) {
@@ -307,6 +319,10 @@ export class AiChatService {
         result = this.toolEscalate(userId, args);
         structured.needsHumanSupport = true;
         structured.escalationReason = args.reason;
+        break;
+      }
+      case 'search_knowledge_base': {
+        result = await this.toolSearchKnowledgeBase(args);
         break;
       }
       default:

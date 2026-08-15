@@ -8,12 +8,12 @@ import { ChatUsageLog } from './entities/chat-usage-log.entity';
 import { ChatFeedback } from './entities/chat-feedback.entity';
 import { AiChatService } from './ai-chat.service';
 import { AiChatController } from './ai-chat.controller';
+import { KnowledgeBaseService } from './knowledge-base.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Flight, FareClass, Booking, ChatMessage, ChatUsageLog, ChatFeedback]),
-  ],
-  providers: [AiChatService],
+  imports: [TypeOrmModule.forFeature([Flight, FareClass, Booking, ChatMessage, ChatUsageLog, ChatFeedback])],
+  providers: [AiChatService, KnowledgeBaseService],
   controllers: [AiChatController],
+  exports: [KnowledgeBaseService],
 })
 export class AiChatModule {}

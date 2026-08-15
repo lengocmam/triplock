@@ -5,7 +5,10 @@ const EMBED_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemin
 export async function getEmbedding(apiKey: string, text: string): Promise<number[]> {
   const response = await axios.post(
     `${EMBED_URL}?key=${apiKey}`,
-    { content: { parts: [{ text }] } },
+    {
+      content: { parts: [{ text }] },
+      outputDimensionality: 768, // ép về 768 chiều để khớp cột vector(768) trong Postgres
+    },
     { headers: { 'Content-Type': 'application/json' }, timeout: 10000 },
   );
   return response.data.embedding.values;

@@ -19,6 +19,8 @@ import { MockDataService } from './mock-data.service';
 import { CreateFlightDto } from './dto/create-flight.dto';
 import { UpdateFlightDto } from './dto/update-flight.dto';
 import { UpdateFareClassDto } from './dto/update-fare-class.dto';
+import { KnowledgeBaseService } from '../ai-chat/knowledge-base.service';
+import { IngestDocsDto } from '../ai-chat/dto/ingest-docs.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,6 +29,7 @@ export class AdminController {
   constructor(
     private adminService: AdminService,
     private mockDataService: MockDataService,
+    private knowledgeBaseService: KnowledgeBaseService,
   ) {}
 
   @Get('dashboard-stats')
@@ -111,5 +114,15 @@ export class AdminController {
   @Post('seed-mock-data')
   seedMockData(): Promise<any> {
     return this.mockDataService.seedAll();
+  }
+
+  @Post('knowledge-base/ingest')
+  ingestKnowledge(@Body() body: IngestDocsDto) {
+    return this.knowledgeBaseService.ingestBatch(body.docs);
+  }
+
+  @Delete('knowledge-base')
+  clearKnowledge() {
+    return this.knowledgeBaseService.clearAll();
   }
 }

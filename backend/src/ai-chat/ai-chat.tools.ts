@@ -28,6 +28,20 @@ export const AI_CHAT_TOOLS = [
         },
       },
       {
+        name: 'search_knowledge_base',
+        description:
+          'Tìm kiếm thông tin trong cơ sở tri thức (chính sách hành lý, quy trình hoàn vé, check-in, quy định đặc biệt...) ' +
+          'bằng tìm kiếm ngữ nghĩa. Dùng khi khách hỏi câu diễn đạt tự do không khớp chính xác với tool get_fare_policy, ' +
+          'ví dụ "hành lý quá cân tính sao", "tôi đến trễ có được lên máy bay không".',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            query: { type: 'STRING', description: 'Câu hỏi hoặc chủ đề cần tra cứu' },
+          },
+          required: ['query'],
+        },
+      },
+      {
         name: 'get_fare_policy',
         description:
           'Lấy chính sách hành lý, hoàn vé, đổi lịch của 1 hạng vé cụ thể (Economy / Economy Saver / Economy An toàn), ' +
